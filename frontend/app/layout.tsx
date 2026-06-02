@@ -3,6 +3,21 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import Providers from '../components/Providers';
 import { ReactNode } from 'react';
+import { Inter, Outfit } from 'next/font/google';
+
+const inter = Inter({
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '600', '700'],
+  variable: '--font-inter',
+  display: 'swap',
+});
+
+const outfit = Outfit({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700', '800'],
+  variable: '--font-outfit',
+  display: 'swap',
+});
 
 export const metadata = {
   title: 'FoodBridge AI - Surplus Food Redistribution System',
@@ -11,7 +26,7 @@ export const metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className="dark bg-dark-900">
+    <html lang="en" className={`dark bg-dark-900 ${inter.variable} ${outfit.variable}`}>
       <body
         className="flex flex-col min-h-screen bg-dark-900 text-slate-100 antialiased overflow-x-hidden"
         style={{
