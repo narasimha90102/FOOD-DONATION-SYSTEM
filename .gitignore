@@ -1,0 +1,44 @@
+# Node Package Manager dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# NextJS build parameters
+frontend/.next/
+frontend/out/
+
+# Expo Mobile system bundles
+mobile/.expo/
+mobile/dist/
+mobile/web-build/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Compiled JavaScript bundles
+backend/dist/
+backend/build/
+
+# Local Environment Variables files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+backend/.env
+frontend/.env
+mobile/.env
+
+# Diagnostic caches & System artifacts
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
