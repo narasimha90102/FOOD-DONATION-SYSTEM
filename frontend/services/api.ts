@@ -1,4 +1,4 @@
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5003/api';
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://food-donation-system-pqfz.onrender.com/api';
 
 interface FetchOptions extends RequestInit {
   body?: any;
