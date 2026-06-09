@@ -16,6 +16,7 @@ interface UserProfile {
   ngoCapacity?: number;
   ngoAcceptedCategories?: string[];
   address?: string;
+  phoneNumber?: string;
   location?: {
     coordinates: [number, number];
   };
@@ -77,6 +78,7 @@ interface AppState {
   setNotifications: (notifications: NotificationItem[]) => void;
   addNotification: (notification: NotificationItem) => void;
   markNotificationRead: (notificationId: string) => void;
+  markAllNotificationsRead: () => void;
 
   // Chat Operations
   setChats: (chats: ChatRoom[]) => void;
@@ -150,6 +152,11 @@ export const useAppStore = create<AppState>((set) => {
         notifications: state.notifications.map((n) =>
           n._id === notificationId ? { ...n, read: true } : n
         ),
+      })),
+
+    markAllNotificationsRead: () =>
+      set((state) => ({
+        notifications: state.notifications.map((n) => ({ ...n, read: true })),
       })),
 
     setChats: (chats) => set({ chats }),

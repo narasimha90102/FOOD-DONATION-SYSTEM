@@ -125,6 +125,10 @@ const UserSchema = new Schema<IUser>(
       type: String,
       default: '',
     },
+    phoneNumber: {
+      type: String,
+      default: '',
+    },
     isBlocked: {
       type: Boolean,
       default: false,

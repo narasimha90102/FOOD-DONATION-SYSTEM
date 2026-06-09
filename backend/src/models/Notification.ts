@@ -23,10 +23,12 @@ const NotificationSchema = new Schema<INotification>(
       enum: [
         'NEW_DONATION',
         'DONATION_ACCEPTED',
+        'DONATION_CANCELLED',
         'PICKUP_STARTED',
         'DELIVERY_COMPLETED',
         'EXPIRY_WARNING',
         'VERIFICATION_UPDATE',
+        'TRUST_SCORE_UPDATE',
         'CHAT',
       ],
       required: true,

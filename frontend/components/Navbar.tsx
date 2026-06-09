@@ -5,13 +5,18 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useAppStore } from '../store/useAppStore';
 import { LogOut, Bell, Heart, Menu, X, Landmark, Compass, Award } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
+import UserAvatar from './UserAvatar';
+import ProfileDropdown from './ProfileDropdown';
+import NotificationDropdown from './NotificationDropdown';
+import { ApiService } from '../services/api';
 
 export default function Navbar() {
-  const { user, logout, isAuthenticated, notifications } = useAppStore();
+  const { user, logout, isAuthenticated, notifications, setNotifications } = useAppStore();
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [bellOpen, setBellOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -22,6 +27,19 @@ export default function Navbar() {
   // so server renders isAuthenticated=false. We defer auth-dependent UI until mounted.
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
+
+  // Fetch existing notifications on mount
+  useEffect(() => {
+    if (mounted && isAuthenticated && user) {
+      ApiService.get('/notifications')
+        .then((res) => {
+          if (res.success && res.notifications) {
+            setNotifications(res.notifications);
+          }
+        })
+        .catch((err) => console.error('[Navbar] Error fetching notifications:', err));
+    }
+  }, [mounted, isAuthenticated, user, setNotifications]);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
@@ -67,7 +85,7 @@ export default function Navbar() {
   }, [pathname, isAuthenticated, user, mobileOpen, mounted]);
 
   // Close panels on navigation
-  useEffect(() => { setMobileOpen(false); setDropdownOpen(false); }, [pathname]);
+  useEffect(() => { setMobileOpen(false); setDropdownOpen(false); setBellOpen(false); }, [pathname]);
 
   // ── Class helpers ────────────────────────────────────────────────────────────
   // Plain text nav link that the slider slides behind (Home / About / Contact / Dashboard / Chats)
@@ -181,7 +199,10 @@ export default function Navbar() {
 
                 {/* Bell */}
                 <div className="relative z-10 ml-1">
-                  <button className="text-slate-300 hover:text-white p-2 hover:bg-white/5 rounded-full transition-colors">
+                  <button
+                    onClick={() => setBellOpen(!bellOpen)}
+                    className="bell-toggle-btn text-slate-300 hover:text-white p-2 hover:bg-white/5 rounded-full transition-colors relative"
+                  >
                     <Bell className="h-5 w-5" />
                     {unreadCount > 0 && (
                       <span className="absolute top-0.5 right-0.5 h-3.5 w-3.5 bg-red-500 text-white rounded-full text-[9px] flex items-center justify-center font-bold">
@@ -189,31 +210,31 @@ export default function Navbar() {
                       </span>
                     )}
                   </button>
+                  <NotificationDropdown
+                    isOpen={bellOpen}
+                    onClose={() => setBellOpen(false)}
+                  />
                 </div>
 
                 {/* Avatar dropdown */}
                 <div className="relative z-10">
                   <button
                     onClick={() => setDropdownOpen(!dropdownOpen)}
-                    className="flex items-center gap-2 hover:bg-white/5 px-2.5 py-1.5 rounded-xl transition-all border border-white/10">
-                    {user.profilePicture
-                      ? <img src={user.profilePicture} alt="profile" className="h-6 w-6 rounded-full object-cover" />
-                      : <div className="h-6 w-6 rounded-full bg-brand-500/20 text-brand-500 flex items-center justify-center text-xs font-bold">{user.name.charAt(0)}</div>
-                    }
+                    className="avatar-toggle-btn flex items-center gap-2 hover:bg-white/5 px-2.5 py-1.5 rounded-xl transition-all border border-white/10">
+                    <UserAvatar
+                      src={user.profilePicture}
+                      name={user.name}
+                      size="xs"
+                      className="border border-brand-500/50"
+                    />
                     <span className="text-sm font-medium text-slate-200">{user.name.split(' ')[0]}</span>
                   </button>
-                  {dropdownOpen && (
-                    <div className="absolute right-0 mt-2 w-48 rounded-xl bg-dark-800 border border-white/10 p-1 shadow-2xl glass-panel">
-                      <div className="px-3 py-2 border-b border-white/5">
-                        <p className="text-xs text-slate-400">Signed in as</p>
-                        <p className="text-sm font-semibold truncate text-white">{user.email}</p>
-                        <span className="inline-block mt-1 bg-brand-500/20 text-brand-500 text-[10px] px-1.5 py-0.5 rounded font-bold">{user.role}</span>
-                      </div>
-                      <button onClick={handleLogout} className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-white/5 rounded-lg transition-colors mt-1">
-                        <LogOut className="h-4 w-4" /> Logout
-                      </button>
-                    </div>
-                  )}
+                  <ProfileDropdown
+                    isOpen={dropdownOpen}
+                    onClose={() => setDropdownOpen(false)}
+                    user={user}
+                    onLogout={handleLogout}
+                  />
                 </div>
               </div>
             )}
@@ -308,6 +329,8 @@ export default function Navbar() {
               {user.role === 'ADMIN' && (
                 <Link href="/admin" className="relative z-10 block px-4 py-2.5 rounded-xl text-sm font-semibold text-amber-400 hover:bg-amber-500/10 transition-colors">Admin Control</Link>
               )}
+
+              <Link href="/profile" data-nav-item="/profile" className={mobileNavLink('/profile')}>Edit Profile</Link>
 
               <button onClick={handleLogout} className="relative z-10 w-full text-left flex items-center gap-2 px-4 py-2.5 mt-1 text-red-400 hover:bg-white/5 rounded-xl text-sm font-medium transition-colors">
                 <LogOut className="h-4 w-4" /> Logout

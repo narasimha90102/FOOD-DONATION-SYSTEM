@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import { env } from '../config/env';
 import { User } from '../models/User';
 import { EmailService } from '../services/email.service';
@@ -205,32 +206,51 @@ export const googleLogin = async (req: Request, res: Response, next: NextFunctio
 };
 
 /**
- * @desc    Initiate forgot password trigger
+ * @desc    Initiate forgot password — generates secure URL token & sends reset link
  * @route   POST /api/auth/forgot-password
  * @access  Public
  */
 export const forgotPassword = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Please provide your registered email address.' });
+    }
+
     const user = await User.findOne({ email });
 
     if (!user) {
-      return res.status(404).json({ success: false, message: 'No registered user found with this email.' });
+      // Security: always return 200 to prevent email enumeration
+      return res.status(200).json({
+        success: true,
+        message: 'If that email is registered, a reset link has been sent.',
+      });
     }
 
-    const resetCode = generateNumericCode();
-    user.resetPasswordToken = resetCode;
-    user.resetPasswordExpire = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+    // Generate a cryptographically secure random token
+    const rawToken = crypto.randomBytes(32).toString('hex');
+
+    // Store hashed version in DB (raw token goes in the email link)
+    user.resetPasswordToken = crypto.createHash('sha256').update(rawToken).digest('hex');
+    user.resetPasswordExpire = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
     await user.save();
 
-    const emailSent = await EmailService.sendResetPasswordCode(user.email, resetCode);
+    // Build the reset URL
+    const resetUrl = `${env.FRONTEND_URL}/auth/reset-password?token=${rawToken}`;
+
+    const emailSent = await EmailService.sendPasswordResetLink(user.email, user.name, resetUrl);
     if (!emailSent) {
-      return res.status(500).json({ success: false, message: 'Error sending password reset email. Please try again.' });
+      // Rollback token on email failure
+      user.resetPasswordToken = undefined;
+      user.resetPasswordExpire = undefined;
+      await user.save();
+      return res.status(500).json({ success: false, message: 'Error sending reset email. Please try again.' });
     }
 
     res.status(200).json({
       success: true,
-      message: 'Password reset code successfully sent to email.',
+      message: 'If that email is registered, a reset link has been sent.',
     });
   } catch (error) {
     next(error);
@@ -238,29 +258,42 @@ export const forgotPassword = async (req: Request, res: Response, next: NextFunc
 };
 
 /**
- * @desc    Complete forgot password reset
+ * @desc    Complete password reset using the URL token
  * @route   POST /api/auth/reset-password
  * @access  Public
  */
 export const resetPassword = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { email, code, newPassword } = req.body;
+    const { token, newPassword, confirmPassword } = req.body;
 
-    if (!email || !code || !newPassword) {
-      return res.status(400).json({ success: false, message: 'Please provide email, reset code, and your new password.' });
+    if (!token || !newPassword) {
+      return res.status(400).json({ success: false, message: 'Please provide a reset token and a new password.' });
     }
 
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ success: false, message: 'Passwords do not match.' });
+    }
+
+    if (newPassword.length < 8) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 8 characters long.' });
+    }
+
+    // Hash the incoming token and compare against DB
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
     const user = await User.findOne({
-      email,
-      resetPasswordToken: code,
+      resetPasswordToken: hashedToken,
       resetPasswordExpire: { $gt: new Date() },
     }).select('+password');
 
     if (!user) {
-      return res.status(400).json({ success: false, message: 'Password reset code is invalid or has expired.' });
+      return res.status(400).json({
+        success: false,
+        message: 'This reset link is invalid or has expired. Please request a new one.',
+      });
     }
 
-    // Set new password (Mongoose pre-save hooks will encrypt automatically)
+    // Update password (Mongoose pre-save hook hashes it)
     user.password = newPassword;
     user.resetPasswordToken = undefined;
     user.resetPasswordExpire = undefined;
@@ -268,7 +301,7 @@ export const resetPassword = async (req: Request, res: Response, next: NextFunct
 
     res.status(200).json({
       success: true,
-      message: 'Password has been reset successfully. Please login with your new credentials.',
+      message: 'Password reset successfully. You can now log in with your new password.',
     });
   } catch (error) {
     next(error);
@@ -305,10 +338,11 @@ export const updateProfile = async (req: AuthRequest, res: Response, next: NextF
       return res.status(404).json({ success: false, message: 'User matching credentials not found.' });
     }
 
-    const { name, address, coordinates, profilePicture, ngoDocumentUrl, ngoCapacity, ngoAcceptedCategories } = req.body;
+    const { name, address, phoneNumber, coordinates, profilePicture, ngoDocumentUrl, ngoCapacity, ngoAcceptedCategories } = req.body;
 
     if (name) user.name = name;
     if (address) user.address = address;
+    if (phoneNumber !== undefined) user.phoneNumber = phoneNumber;
     if (profilePicture) user.profilePicture = profilePicture;
 
     // NGO specific properties update

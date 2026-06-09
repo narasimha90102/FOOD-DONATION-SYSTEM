@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { ApiService } from '../../services/api';
 import { useAppStore } from '../../store/useAppStore';
 import { Heart, Compass, ShieldCheck, Award, Zap, RefreshCw, BarChart2, PlusCircle, MessageSquare } from 'lucide-react';
@@ -19,11 +20,22 @@ interface DonationItem {
 }
 
 export default function DonorDashboard() {
-  const { user } = useAppStore();
+  const { user, isAuthenticated } = useAppStore();
+  const router = useRouter();
+  const [mounted, setMounted] = useState(false);
   const [stats, setStats] = useState<any>(null);
   const [history, setHistory] = useState<DonationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
+
+  // Auth guard: redirect to login if not authenticated after hydration
+  useEffect(() => {
+    if (mounted && !isAuthenticated) {
+      router.push('/auth/login');
+    }
+  }, [mounted, isAuthenticated, router]);
 
   const fetchDashboardData = async () => {
     try {
@@ -42,9 +54,12 @@ export default function DonorDashboard() {
     }
   };
 
+  // Only fetch once mounted (so localStorage token is available) and authenticated
   useEffect(() => {
-    fetchDashboardData();
-  }, []);
+    if (mounted && isAuthenticated) {
+      fetchDashboardData();
+    }
+  }, [mounted, isAuthenticated]);
 
   if (loading) {
     return (

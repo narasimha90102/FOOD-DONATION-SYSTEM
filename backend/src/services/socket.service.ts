@@ -92,7 +92,16 @@ export class SocketService {
     notificationData: {
       title: string;
       message: string;
-      type: 'NEW_DONATION' | 'DONATION_ACCEPTED' | 'PICKUP_STARTED' | 'DELIVERY_COMPLETED' | 'EXPIRY_WARNING' | 'VERIFICATION_UPDATE' | 'CHAT';
+      type:
+        | 'NEW_DONATION'
+        | 'DONATION_ACCEPTED'
+        | 'DONATION_CANCELLED'
+        | 'PICKUP_STARTED'
+        | 'DELIVERY_COMPLETED'
+        | 'EXPIRY_WARNING'
+        | 'VERIFICATION_UPDATE'
+        | 'TRUST_SCORE_UPDATE'
+        | 'CHAT';
       relatedId?: string;
     }
   ): Promise<void> {

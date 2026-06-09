@@ -232,7 +232,15 @@ export default function LoginPage() {
           />
 
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Security Password</label>
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Security Password</label>
+              <Link
+                href="/auth/forgot-password"
+                className="text-[11px] text-brand-500 hover:text-brand-400 font-semibold transition-colors"
+              >
+                Forgot Password?
+              </Link>
+            </div>
             <div className="relative">
               <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
                 <Key className="h-4 w-4" />

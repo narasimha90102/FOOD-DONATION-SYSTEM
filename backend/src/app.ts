@@ -11,6 +11,7 @@ import donationRoutes from './routes/donation.routes';
 import chatRoutes from './routes/chat.routes';
 import adminRoutes from './routes/admin.routes';
 import aiRoutes from './routes/ai.routes';
+import notificationRoutes from './routes/notification.routes';
 
 const app = express();
 
@@ -66,6 +67,7 @@ app.use('/api/donations', donationRoutes);
 app.use('/api/chats', chatRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Catch-all 404 Route handler
 app.use((req, res, next) => {

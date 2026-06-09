@@ -39,6 +39,15 @@ export class ApiService {
       const data = await response.json();
 
       if (!response.ok) {
+        // Global 401 handler: token expired or invalid → force re-login
+        if (response.status === 401 && typeof window !== 'undefined') {
+          localStorage.removeItem('fb_token');
+          localStorage.removeItem('fb_user');
+          // Only redirect if not already on the auth pages
+          if (!window.location.pathname.startsWith('/auth')) {
+            window.location.href = '/auth/login';
+          }
+        }
         throw new Error(data.message || `Request failed with status ${response.status}`);
       }
 

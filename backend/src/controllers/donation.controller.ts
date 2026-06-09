@@ -341,11 +341,28 @@ export const updateDonationStatus = async (req: AuthRequest, res: Response, next
     if (status === 'PICKED_UP') {
       // NGO picked up, notify donor
       await SocketService.sendSystemNotification(donorIdStr, {
-        title: 'Food Picked Up!',
-        message: `NGO is now routing your food "${donation.foodName}" to the distribution center.`,
+        title: 'Food Picked Up! 🚚',
+        message: `Your donation "${donation.foodName}" has been collected and is now on its way to the distribution centre.`,
         type: 'PICKUP_STARTED',
         relatedId: donation._id.toString(),
       });
+    } else if (status === 'DELIVERED') {
+      // Delivered to the NGO centre — notify donor
+      await SocketService.sendSystemNotification(donorIdStr, {
+        title: 'Donation Delivered! 📦',
+        message: `"${donation.foodName}" has been delivered to the NGO centre and is being prepared for distribution.`,
+        type: 'DELIVERY_COMPLETED',
+        relatedId: donation._id.toString(),
+      });
+      // Notify NGO as well
+      if (ngoIdStr) {
+        await SocketService.sendSystemNotification(ngoIdStr, {
+          title: 'Food Arrived at Centre',
+          message: `"${donation.foodName}" has arrived. Please prepare it for beneficiary distribution.`,
+          type: 'DELIVERY_COMPLETED',
+          relatedId: donation._id.toString(),
+        });
+      }
     } else if (status === 'COMPLETED') {
       // Completed, give Donor points and log metrics
       const donor = await User.findById(donation.donor);
@@ -375,6 +392,14 @@ export const updateDonationStatus = async (req: AuthRequest, res: Response, next
         // Increase trust score for completed cycles
         donor.trustScore = Math.min(100, donor.trustScore + 2);
         await donor.save();
+
+        // Notify donor about trust score increase
+        await SocketService.sendSystemNotification(donorIdStr, {
+          title: '⭐ Trust Score Increased!',
+          message: `Great work! Your Trust Score has increased to ${donor.trustScore}% for completing a full donation cycle.`,
+          type: 'TRUST_SCORE_UPDATE',
+          relatedId: donation._id.toString(),
+        });
       }
 
       // Notify NGO & Donor
