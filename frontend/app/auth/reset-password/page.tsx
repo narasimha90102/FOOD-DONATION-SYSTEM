@@ -142,7 +142,8 @@ function ResetPasswordForm() {
               onChange={(e) => setNewPassword(e.target.value)}
               required
               disabled={loading}
-              className="w-full glass-input pl-10 pr-10"
+              className="w-full glass-input"
+              style={{ paddingLeft: '40px', paddingRight: '40px' }}
             />
             <button
               type="button"
@@ -187,13 +188,14 @@ function ResetPasswordForm() {
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
               disabled={loading}
-              className={`w-full glass-input pl-10 pr-10 transition-all ${
+              className={`w-full glass-input transition-all ${
                 confirmPassword && newPassword !== confirmPassword
                   ? 'border-red-500/50'
                   : confirmPassword && newPassword === confirmPassword
                   ? 'border-brand-500/50'
                   : ''
               }`}
+              style={{ paddingLeft: '40px', paddingRight: '40px' }}
             />
             <button
               type="button"

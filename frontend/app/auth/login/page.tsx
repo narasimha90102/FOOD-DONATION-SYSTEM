@@ -253,7 +253,8 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 disabled={loading}
-                className="w-full glass-input pl-10 pr-10"
+                className="w-full glass-input"
+                style={{ paddingLeft: '40px', paddingRight: '40px' }}
               />
               <button
                 type="button"

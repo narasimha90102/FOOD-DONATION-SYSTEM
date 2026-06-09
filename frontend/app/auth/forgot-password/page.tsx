@@ -104,7 +104,8 @@ export default function ForgotPasswordPage() {
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     disabled={loading}
-                    className="w-full glass-input pl-10"
+                    className="w-full glass-input"
+                    style={{ paddingLeft: '40px' }}
                   />
                 </div>
               </div>

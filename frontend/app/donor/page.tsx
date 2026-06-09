@@ -139,18 +139,18 @@ export default function DonorDashboard() {
       </div>
 
       {/* 2. Operational Metrics Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
         {statCards.map((card, idx) => {
           const Icon = card.icon;
           return (
-            <div key={idx} className="glass-panel p-6 border-white/5 flex items-center gap-4">
-              <div className={`${card.bg} p-3 rounded-xl shrink-0`}>
-                <Icon className={`h-6 w-6 ${card.color}`} />
+            <div key={idx} className="glass-panel p-3 sm:p-6 border-white/5 flex items-center gap-2 sm:gap-4 min-w-0">
+              <div className={`${card.bg} p-2 sm:p-3 rounded-lg sm:rounded-xl shrink-0`}>
+                <Icon className={`h-5 w-5 sm:h-6 sm:w-6 ${card.color}`} />
               </div>
-              <div className="flex flex-col">
-                <span className="text-slate-400 text-xs font-semibold">{card.label}</span>
-                <span className="text-xl sm:text-2xl font-bold text-white text-outfit mt-0.5">{card.value}</span>
-                <span className="text-slate-500 text-[11px] mt-0.5">{card.sub}</span>
+              <div className="flex flex-col min-w-0">
+                <span className="text-slate-400 text-[10px] sm:text-xs font-semibold truncate">{card.label}</span>
+                <span className="text-lg sm:text-2xl font-bold text-white text-outfit mt-0.5 leading-tight">{card.value}</span>
+                <span className="text-slate-500 text-[9px] sm:text-[11px] mt-0.5 truncate">{card.sub}</span>
               </div>
             </div>
           );
