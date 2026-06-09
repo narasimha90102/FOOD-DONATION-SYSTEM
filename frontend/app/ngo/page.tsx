@@ -198,7 +198,60 @@ export default function NgoDashboard() {
         </div>
       )}
 
-      {/* 2. Main Dashboard Layout (Unclaimed Radar on left, Claimed Pipeline on right) */}
+      {/* 2. Stat Cards Row */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+        {/* Active Listings */}
+        <div className="glass-panel p-3 sm:p-5 border-white/5 flex items-center gap-3 min-w-0">
+          <div className="bg-brand-500/10 p-2 rounded-lg shrink-0">
+            <Compass className="h-5 w-5 text-brand-500" />
+          </div>
+          <div className="flex flex-col min-w-0">
+            <span className="text-slate-400 text-[10px] font-semibold uppercase tracking-wider truncate">Active Listings</span>
+            <span className="text-2xl font-bold text-white text-outfit leading-tight">{nearby.length}</span>
+            <span className="text-slate-500 text-[9px] truncate">Unclaimed nearby</span>
+          </div>
+        </div>
+
+        {/* In Pipeline */}
+        <div className="glass-panel p-3 sm:p-5 border-white/5 flex items-center gap-3 min-w-0">
+          <div className="bg-amber-500/10 p-2 rounded-lg shrink-0">
+            <RefreshCw className="h-5 w-5 text-amber-400" />
+          </div>
+          <div className="flex flex-col min-w-0">
+            <span className="text-slate-400 text-[10px] font-semibold uppercase tracking-wider truncate">In Pipeline</span>
+            <span className="text-2xl font-bold text-white text-outfit leading-tight">{pipeline.length}</span>
+            <span className="text-slate-500 text-[9px] truncate">Claimed & active</span>
+          </div>
+        </div>
+
+        {/* Scan Radius */}
+        <div className="glass-panel p-3 sm:p-5 border-white/5 flex items-center gap-3 min-w-0">
+          <div className="bg-teal-500/10 p-2 rounded-lg shrink-0">
+            <MapPin className="h-5 w-5 text-teal-400" />
+          </div>
+          <div className="flex flex-col min-w-0">
+            <span className="text-slate-400 text-[10px] font-semibold uppercase tracking-wider truncate">Scan Radius</span>
+            <span className="text-2xl font-bold text-white text-outfit leading-tight">{radius} <span className="text-sm">KM</span></span>
+            <span className="text-slate-500 text-[9px] truncate">Current filter</span>
+          </div>
+        </div>
+
+        {/* GPS Status */}
+        <div className="glass-panel p-3 sm:p-5 border-white/5 flex items-center gap-3 min-w-0">
+          <div className={`p-2 rounded-lg shrink-0 ${gpsCoords ? 'bg-emerald-500/10' : 'bg-slate-500/10'}`}>
+            <Navigation className={`h-5 w-5 ${gpsCoords ? 'text-emerald-400' : 'text-slate-500'}`} />
+          </div>
+          <div className="flex flex-col min-w-0">
+            <span className="text-slate-400 text-[10px] font-semibold uppercase tracking-wider truncate">GPS Status</span>
+            <span className={`text-sm font-bold leading-tight mt-0.5 ${gpsCoords ? 'text-emerald-400' : 'text-slate-400'}`}>
+              {gpsCoords ? 'Active' : 'Not Set'}
+            </span>
+            <span className="text-slate-500 text-[9px] truncate">{gpsCoords ? 'Location known' : 'Click Use My GPS'}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* 3. Main Dashboard Layout (Unclaimed Radar on left, Claimed Pipeline on right) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
         {/* Proximity unclaimed scan list (takes 2 cols) */}
@@ -219,21 +272,32 @@ export default function NgoDashboard() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               {nearby.map((item) => (
                 <div key={item._id} className="glass-panel p-6 border-white/5 flex flex-col justify-between gap-5 glass-panel-hover relative overflow-hidden">
-                  
-                  {/* Distance Ribbon */}
-                  <span className={`absolute top-3 right-3 text-xs px-2.5 py-0.5 rounded font-bold ${
+
+                  {/* Prominent Distance Badge */}
+                  <div className={`absolute top-3 right-3 flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold border ${
                     item.distance === -1
-                      ? 'bg-slate-500/10 text-slate-400'
-                      : 'bg-brand-500/10 text-brand-500'
+                      ? 'bg-slate-500/10 border-slate-500/20 text-slate-400'
+                      : item.distance <= 5
+                      ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                      : 'bg-brand-500/10 border-brand-500/20 text-brand-500'
                   }`}>
-                    {item.distance === -1 ? 'Dist. Unknown' : `${item.distance} KM Away`}
-                  </span>
+                    <MapPin className="h-3 w-3" />
+                    {item.distance === -1 ? 'Unknown' : `${item.distance} KM`}
+                  </div>
 
                   <div className="space-y-3">
-                    <div className="space-y-1">
+                    <div className="space-y-1 pr-20">
                       <span className="text-[10px] uppercase font-bold text-slate-500 block">{item.foodCategory}</span>
-                      <h4 className="text-lg font-bold text-white text-outfit leading-tight pr-14">{item.foodName}</h4>
+                      <h4 className="text-lg font-bold text-white text-outfit leading-tight">{item.foodName}</h4>
                     </div>
+
+                    {/* Pickup address */}
+                    {item.pickupAddress && (
+                      <div className="flex items-start gap-1.5 text-[10px] text-slate-400">
+                        <MapPin className="h-3 w-3 text-slate-500 shrink-0 mt-0.5" />
+                        <span className="truncate">{item.pickupAddress}</span>
+                      </div>
+                    )}
 
                     <div className="flex items-center justify-between text-xs border-t border-b border-white/5 py-2 my-1">
                       <div className="flex flex-col">
@@ -270,7 +334,7 @@ export default function NgoDashboard() {
                     ) : (
                       <CheckSquare className="h-3.5 w-3.5" />
                     )}
-                    <span>Claim surplus surplus Surplus</span>
+                    <span>Claim Surplus Food</span>
                   </button>
 
                 </div>
