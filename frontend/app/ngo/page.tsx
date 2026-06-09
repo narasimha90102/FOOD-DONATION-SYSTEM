@@ -3,8 +3,7 @@
 import { useEffect, useState } from 'react';
 import { ApiService } from '../../services/api';
 import { useAppStore } from '../../store/useAppStore';
-import { Compass, Compass as Radar, ShieldCheck, MapPin, MessageSquare, RefreshCw, ChevronRight, CheckSquare, Star, Map } from 'lucide-react';
-import Link from 'next/router';
+import { Compass, MapPin, MessageSquare, RefreshCw, CheckSquare, Star, Map, Navigation, AlertTriangle } from 'lucide-react';
 import NextLink from 'next/link';
 
 interface NearbyDonation {
@@ -47,23 +46,29 @@ export default function NgoDashboard() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [statusLoading, setStatusLoading] = useState<string | null>(null);
+  const [locationKnown, setLocationKnown] = useState(true);
+  const [gpsCoords, setGpsCoords] = useState<{ lng: number; lat: number } | null>(null);
+  const [gpsLoading, setGpsLoading] = useState(false);
 
   // Ratings overlay state
   const [ratingTarget, setRatingTarget] = useState<string | null>(null);
   const [ratingScore, setRatingScore] = useState<number>(5);
 
-  const fetchNgoData = async () => {
+  const fetchNgoData = async (coords?: { lng: number; lat: number }) => {
     try {
       setRefreshing(true);
-      
-      // Fetch Surrounding Active unclaimed listings
-      const nearbyRes = await ApiService.get(`/donations/nearby?radius=${radius}`);
-      
-      // Fetch claimed pipeline listings
+
+      // Build query — pass GPS coords if available for accurate proximity
+      const activeCoords = coords || gpsCoords;
+      const locationQuery = activeCoords
+        ? `&longitude=${activeCoords.lng}&latitude=${activeCoords.lat}`
+        : '';
+
+      const nearbyRes = await ApiService.get(`/donations/nearby?radius=${radius}${locationQuery}`);
       const pipelineRes = await ApiService.get('/donations?status=');
 
       setNearby(nearbyRes.donations || []);
-      // Filter out completed ones for pipeline display
+      setLocationKnown(nearbyRes.locationKnown !== false);
       setPipeline((pipelineRes.donations || []).filter((d: any) => d.status !== 'COMPLETED'));
     } catch (err) {
       console.error('[NgoDashboard] Fetch error:', err);
@@ -71,6 +76,21 @@ export default function NgoDashboard() {
       setLoading(false);
       setRefreshing(false);
     }
+  };
+
+  // Auto-detect browser GPS and refetch
+  const useGPS = () => {
+    if (!navigator.geolocation) return;
+    setGpsLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const coords = { lng: pos.coords.longitude, lat: pos.coords.latitude };
+        setGpsCoords(coords);
+        setGpsLoading(false);
+        fetchNgoData(coords);
+      },
+      () => { setGpsLoading(false); }
+    );
   };
 
   useEffect(() => {
@@ -109,7 +129,7 @@ export default function NgoDashboard() {
   if (loading) {
     return (
       <div className="flex-grow flex flex-col items-center justify-center py-20 text-center">
-        <Radar className="h-8 w-8 text-brand-500 animate-spin mb-4" />
+        <Compass className="h-8 w-8 text-brand-500 animate-spin mb-4" />
         <p className="text-slate-400">Locking surround surplus coordinates...</p>
       </div>
     );
@@ -128,6 +148,17 @@ export default function NgoDashboard() {
         </div>
         
         <div className="flex items-center gap-3">
+          {/* Use My GPS button */}
+          <button
+            onClick={useGPS}
+            disabled={gpsLoading}
+            title="Use my current GPS location for accurate nearby search"
+            className="flex items-center gap-1.5 border border-brand-500/30 hover:border-brand-500 bg-brand-500/5 hover:bg-brand-500/10 px-3 py-1.5 rounded-lg text-brand-500 text-xs font-bold transition-all"
+          >
+            {gpsLoading ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Navigation className="h-3.5 w-3.5" />}
+            {gpsLoading ? 'Detecting...' : gpsCoords ? 'GPS Active' : 'Use My GPS'}
+          </button>
+
           {/* Proximity Scanning Radiuses */}
           <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-lg border border-white/5">
             <span className="text-xs text-slate-400 font-bold uppercase">Scan Radius:</span>
@@ -144,7 +175,7 @@ export default function NgoDashboard() {
           </div>
 
           <button
-            onClick={fetchNgoData}
+            onClick={() => fetchNgoData()}
             disabled={refreshing}
             className="border border-white/10 hover:border-white/20 p-2.5 rounded-lg text-slate-300 hover:text-white transition-all hover:bg-white/5"
           >
@@ -152,6 +183,20 @@ export default function NgoDashboard() {
           </button>
         </div>
       </div>
+
+      {/* Location warning banner */}
+      {!locationKnown && (
+        <div className="bg-amber-500/10 border border-amber-500/25 rounded-xl p-4 flex items-start gap-3">
+          <AlertTriangle className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-amber-400 text-sm font-bold">Location Not Set</p>
+            <p className="text-amber-300/70 text-xs mt-0.5 leading-relaxed">
+              Your NGO hub GPS coordinates are not configured. Showing <strong>all available listings</strong> without distance filtering.
+              Click <strong>"Use My GPS"</strong> above to enable accurate proximity scanning, or update your coordinates in your Profile.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* 2. Main Dashboard Layout (Unclaimed Radar on left, Claimed Pipeline on right) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -176,8 +221,12 @@ export default function NgoDashboard() {
                 <div key={item._id} className="glass-panel p-6 border-white/5 flex flex-col justify-between gap-5 glass-panel-hover relative overflow-hidden">
                   
                   {/* Distance Ribbon */}
-                  <span className="absolute top-3 right-3 bg-brand-500/10 text-brand-500 text-xs px-2.5 py-0.5 rounded font-bold">
-                    {item.distance} KM Away
+                  <span className={`absolute top-3 right-3 text-xs px-2.5 py-0.5 rounded font-bold ${
+                    item.distance === -1
+                      ? 'bg-slate-500/10 text-slate-400'
+                      : 'bg-brand-500/10 text-brand-500'
+                  }`}>
+                    {item.distance === -1 ? 'Dist. Unknown' : `${item.distance} KM Away`}
                   </span>
 
                   <div className="space-y-3">

@@ -162,18 +162,17 @@ export const getNearbyDonations = async (req: AuthRequest, res: Response, next: 
 
     let ngoLng = req.user.location?.coordinates[0] || 0;
     let ngoLat = req.user.location?.coordinates[1] || 0;
+    let locationKnown = true;
 
-    // Use query inputs if provided explicitly
+    // Use query inputs if provided explicitly (e.g. browser GPS)
     if (longitude && latitude) {
       ngoLng = Number(longitude);
       ngoLat = Number(latitude);
     }
 
+    // If still no location — fall back to showing ALL pending listings
     if (ngoLng === 0 && ngoLat === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'No location profile found. Please set GPS coordinates to check nearby donations.',
-      });
+      locationKnown = false;
     }
 
     // Retrieve active unclaimed donations
@@ -185,10 +184,14 @@ export const getNearbyDonations = async (req: AuthRequest, res: Response, next: 
 
     for (const don of unclaimedDonations) {
       const [donLng, donLat] = don.location.coordinates;
-      const distance = LocationService.calculateDistance(ngoLat, ngoLng, donLat, donLng);
 
-      if (distance <= maxRadius) {
-        // Calculate dynamic freshness score on query for real-time adjustments
+      // Calculate distance only when NGO location is known
+      const distance = locationKnown
+        ? LocationService.calculateDistance(ngoLat, ngoLng, donLat, donLng)
+        : -1; // -1 signals "distance unknown" to the frontend
+
+      // When location is known, filter by radius; otherwise include all listings
+      if (!locationKnown || distance <= maxRadius) {
         const freshOutput = AIService.predictExpiry({
           foodCategory: don.foodCategory,
           preparationTime: don.preparationTime,
@@ -202,19 +205,21 @@ export const getNearbyDonations = async (req: AuthRequest, res: Response, next: 
         donObj.aiRiskLevel = freshOutput.aiRiskLevel;
         donObj.aiRecommendation = freshOutput.aiRecommendation;
 
-        matchedList.push({
-          ...donObj,
-          distance,
-        });
+        matchedList.push({ ...donObj, distance });
       }
     }
 
-    // Sort closest first
-    matchedList.sort((a, b) => a.distance - b.distance);
+    // Sort closest first (unknown distance listings go last)
+    matchedList.sort((a, b) => {
+      if (a.distance === -1) return 1;
+      if (b.distance === -1) return -1;
+      return a.distance - b.distance;
+    });
 
     res.status(200).json({
       success: true,
       count: matchedList.length,
+      locationKnown,
       donations: matchedList,
     });
   } catch (error) {
