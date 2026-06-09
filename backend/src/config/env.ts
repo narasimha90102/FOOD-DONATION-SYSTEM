@@ -1,8 +1,8 @@
 import dotenv from 'dotenv';
 import path from 'path';
 
-// Load .env file
-dotenv.config({ path: path.join(__dirname, '../../.env') });
+// Load .env file with override enabled to refresh cached terminal envs
+dotenv.config({ path: path.resolve(__dirname, '../../.env'), override: true });
 
 export const env = {
   PORT: parseInt(process.env.PORT || '5003', 10),

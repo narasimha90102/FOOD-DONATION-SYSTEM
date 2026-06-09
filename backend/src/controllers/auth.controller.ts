@@ -325,11 +325,7 @@ export const getMe = async (req: AuthRequest, res: Response, next: NextFunction)
   }
 };
 
-/**
- * @desc    Update logged-in user profile details
- * @route   PUT /api/auth/update
- * @access  Private
- */
+
 export const updateProfile = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const user = await User.findById(req.user?._id);
