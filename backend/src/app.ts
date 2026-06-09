@@ -21,6 +21,7 @@ app.use(helmet());
 // Cross Origin Resource Sharing
 const allowedOrigins = [
   env.FRONTEND_URL,
+  'https://foodbridge-donation.vercel.app',
   'http://localhost:3003',
   'http://localhost:3000',
   'http://127.0.0.1:3003',
@@ -31,7 +32,12 @@ app.use(
     origin: (origin, callback) => {
       // Allow requests with no origin (mobile apps, curl, Postman)
       if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin) || env.NODE_ENV === 'development') {
+      
+      const isAllowed = allowedOrigins.includes(origin) || 
+                        origin.endsWith('.vercel.app') || 
+                        env.NODE_ENV === 'development';
+                        
+      if (isAllowed) {
         return callback(null, true);
       }
       return callback(new Error(`CORS policy: origin ${origin} is not allowed.`));

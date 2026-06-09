@@ -55,8 +55,12 @@ export class ApiService {
     } catch (error: any) {
       // Provide a helpful error when the backend server is not reachable at all
       if (error instanceof TypeError && error.message === 'Failed to fetch') {
-        console.error(`[API Service] ❌ Backend unreachable at ${url}. Is the backend server running on port 5003?`);
-        throw new Error('Cannot connect to the server. Please make sure the backend is running on port 5003.');
+        console.error(`[API Service] ❌ Backend unreachable at ${url}.`);
+        if (url.includes('localhost') || url.includes('127.0.0.1')) {
+          throw new Error('Cannot connect to the local server. Please make sure the backend is running locally on port 5003.');
+        } else {
+          throw new Error(`Cannot connect to the backend server at ${BASE_URL}. Please verify your internet connection or backend server status.`);
+        }
       }
       console.error(`[API Service Error] ${endpoint}:`, error);
       throw error;
