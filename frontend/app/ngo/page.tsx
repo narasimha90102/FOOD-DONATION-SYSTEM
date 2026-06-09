@@ -200,15 +200,15 @@ export default function NgoDashboard() {
 
       {/* 2. Stat Cards Row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-        {/* Active Listings */}
+        {/* Active Now */}
         <div className="glass-panel p-3 sm:p-5 border-white/5 flex items-center gap-3 min-w-0">
           <div className="bg-brand-500/10 p-2 rounded-lg shrink-0">
             <Compass className="h-5 w-5 text-brand-500" />
           </div>
           <div className="flex flex-col min-w-0">
-            <span className="text-slate-400 text-[10px] font-semibold uppercase tracking-wider truncate">Active Listings</span>
+            <span className="text-slate-400 text-[10px] font-semibold uppercase tracking-wider truncate">Active Now</span>
             <span className="text-2xl font-bold text-white text-outfit leading-tight">{nearby.length}</span>
-            <span className="text-slate-500 text-[9px] truncate">Unclaimed nearby</span>
+            <span className="text-slate-500 text-[9px] truncate">All donor listings</span>
           </div>
         </div>
 

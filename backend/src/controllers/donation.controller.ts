@@ -158,7 +158,7 @@ export const getNearbyDonations = async (req: AuthRequest, res: Response, next: 
       return res.status(403).json({ success: false, message: 'Only registered organizations can browse local listings.' });
     }
 
-    const { longitude, latitude, radius = 15 } = req.query;
+    const { longitude, latitude } = req.query;
 
     let ngoLng = req.user.location?.coordinates[0] || 0;
     let ngoLat = req.user.location?.coordinates[1] || 0;
@@ -170,47 +170,45 @@ export const getNearbyDonations = async (req: AuthRequest, res: Response, next: 
       ngoLat = Number(latitude);
     }
 
-    // If still no location — fall back to showing ALL pending listings
+    // Mark location as unknown when coordinates are the default [0, 0]
     if (ngoLng === 0 && ngoLat === 0) {
       locationKnown = false;
     }
 
-    // Retrieve active unclaimed donations
+    // Always retrieve ALL active unclaimed donations — every NGO sees every listing
     const unclaimedDonations = await Donation.find({ status: 'PENDING' })
+      .sort({ createdAt: -1 }) // Newest first as secondary sort
       .populate('donor', 'name email trustScore ratingAverage profilePicture');
 
-    const matchedList: any[] = [];
-    const maxRadius = Number(radius);
+    const allListings: any[] = [];
 
     for (const don of unclaimedDonations) {
       const [donLng, donLat] = don.location.coordinates;
 
-      // Calculate distance only when NGO location is known
+      // Compute distance for display purposes only — never used to filter
       const distance = locationKnown
         ? LocationService.calculateDistance(ngoLat, ngoLng, donLat, donLng)
-        : -1; // -1 signals "distance unknown" to the frontend
+        : -1; // -1 = distance unknown, displayed as "Unknown" on the frontend
 
-      // When location is known, filter by radius; otherwise include all listings
-      if (!locationKnown || distance <= maxRadius) {
-        const freshOutput = AIService.predictExpiry({
-          foodCategory: don.foodCategory,
-          preparationTime: don.preparationTime,
-          estimatedExpiryTime: don.estimatedExpiryTime,
-          storageCondition: don.storageCondition,
-        });
+      const freshOutput = AIService.predictExpiry({
+        foodCategory: don.foodCategory,
+        preparationTime: don.preparationTime,
+        estimatedExpiryTime: don.estimatedExpiryTime,
+        storageCondition: don.storageCondition,
+      });
 
-        const donObj = don.toObject();
-        donObj.aiFreshnessScore = freshOutput.aiFreshnessScore;
-        donObj.aiSafeWindowHours = freshOutput.aiSafeWindowHours;
-        donObj.aiRiskLevel = freshOutput.aiRiskLevel;
-        donObj.aiRecommendation = freshOutput.aiRecommendation;
+      const donObj = don.toObject();
+      donObj.aiFreshnessScore = freshOutput.aiFreshnessScore;
+      donObj.aiSafeWindowHours = freshOutput.aiSafeWindowHours;
+      donObj.aiRiskLevel = freshOutput.aiRiskLevel;
+      donObj.aiRecommendation = freshOutput.aiRecommendation;
 
-        matchedList.push({ ...donObj, distance });
-      }
+      allListings.push({ ...donObj, distance });
     }
 
-    // Sort closest first (unknown distance listings go last)
-    matchedList.sort((a, b) => {
+    // Sort: closest first when location known, newest first otherwise
+    allListings.sort((a, b) => {
+      if (a.distance === -1 && b.distance === -1) return 0;
       if (a.distance === -1) return 1;
       if (b.distance === -1) return -1;
       return a.distance - b.distance;
@@ -218,9 +216,9 @@ export const getNearbyDonations = async (req: AuthRequest, res: Response, next: 
 
     res.status(200).json({
       success: true,
-      count: matchedList.length,
+      count: allListings.length,
       locationKnown,
-      donations: matchedList,
+      donations: allListings,
     });
   } catch (error) {
     next(error);
