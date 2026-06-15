@@ -41,6 +41,17 @@ export const useSocket = () => {
         markChatMessagesSeen(data.chatId, data.readerId);
       });
 
+      // Listen for new donations and status updates for real-time synchronization
+      socket.on('donation_created', (donation: any) => {
+        console.log('[Socket] donation_created received:', donation);
+        window.dispatchEvent(new CustomEvent('donation_update'));
+      });
+
+      socket.on('donation_updated', (donation: any) => {
+        console.log('[Socket] donation_updated received:', donation);
+        window.dispatchEvent(new CustomEvent('donation_update'));
+      });
+
       socketRef.current = socket;
     } catch (e) {
       console.warn('[SocketHook] Socket.io client failed to load, falling back to mock WebSocket simulator for offline compatibility.');

@@ -97,6 +97,18 @@ export default function NgoDashboard() {
     fetchNgoData();
   }, [radius]);
 
+  // Synchronize with real-time updates via Socket.io broadcast CustomEvents
+  useEffect(() => {
+    const handleDonationUpdate = () => {
+      console.log('[NgoDashboard] Real-time donation update triggered. Refetching...');
+      fetchNgoData();
+    };
+    window.addEventListener('donation_update', handleDonationUpdate);
+    return () => {
+      window.removeEventListener('donation_update', handleDonationUpdate);
+    };
+  }, [gpsCoords, radius]);
+
   const handleClaim = async (donationId: string) => {
     try {
       setStatusLoading(donationId);
@@ -315,11 +327,11 @@ export default function NgoDashboard() {
                     {/* Donor trust ratings */}
                     <div className="flex items-center gap-2 bg-white/5 p-2 rounded-lg border border-white/5">
                       <div className="h-6 w-6 rounded bg-brand-500/20 text-brand-500 font-bold flex items-center justify-center text-[10px]">
-                        {item.donor.name.charAt(0)}
+                        {(item.donor?.name || 'Donor').charAt(0)}
                       </div>
                       <div className="flex flex-col leading-none">
-                        <span className="text-[10px] font-bold text-slate-300">{item.donor.name}</span>
-                        <span className="text-[8px] text-slate-500 uppercase mt-0.5">Trust score: {item.donor.trustScore || 85}</span>
+                        <span className="text-[10px] font-bold text-slate-300">{item.donor?.name || 'Donor'}</span>
+                        <span className="text-[8px] text-slate-500 uppercase mt-0.5">Trust score: {item.donor?.trustScore || 85}</span>
                       </div>
                     </div>
                   </div>

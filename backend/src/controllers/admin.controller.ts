@@ -18,7 +18,7 @@ export const getAnalytics = async (req: AuthRequest, res: Response, next: NextFu
 
     // 2. Donation metrics
     const totalDonations = await Donation.countDocuments();
-    const activeDonations = await Donation.countDocuments({ status: { $in: ['PENDING', 'ACCEPTED', 'PICKED_UP'] } });
+    const activeDonations = await Donation.countDocuments({ status: 'PENDING' });
     const completedDonations = await Donation.countDocuments({ status: 'COMPLETED' });
 
     // 3. Mathematical sums (Meals & CO2)

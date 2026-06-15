@@ -85,6 +85,15 @@ export class SocketService {
   }
 
   /**
+   * Broadcasts a real-time message to all connected clients.
+   */
+  public static broadcast(event: string, payload: any): void {
+    if (this.io) {
+      this.io.emit(event, payload);
+    }
+  }
+
+  /**
    * Pushes a database notification to a specific user and logs it in the database.
    */
   public static async sendSystemNotification(

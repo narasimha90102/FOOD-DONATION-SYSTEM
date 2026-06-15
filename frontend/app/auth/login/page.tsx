@@ -3,12 +3,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Script from 'next/script';
 import { useAppStore } from '../../../store/useAppStore';
 import { ApiService } from '../../../services/api';
 import { InputWithIcon } from '../../../components/InputWithIcon';
 import { LogIn, Key, Mail, ShieldAlert, CheckCircle2, RefreshCw, Eye, EyeOff } from 'lucide-react';
 
-const GOOGLE_CLIENT_ID = "593391029903-3rb6nc1c2mctdj8rf17eb95g42c5q6rf.apps.googleusercontent.com";
+const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "593391029903-3rb6nc1c2mctdj8rf17eb95g42c5q6rf.apps.googleusercontent.com";
 
 // Extend Window interface for Google Identity Services
 declare global {
@@ -45,23 +46,19 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [gsiReady, setGsiReady] = useState(false);
 
-  // Handle the credential response from Google GSI popup
-  const handleGoogleCredentialResponse = useCallback(async (response: any) => {
-    console.log('[Google GSI] Credential received from popup.');
+  // Handle the authentication success
+  const handleGoogleSuccess = useCallback(async (idToken: string) => {
     setGoogleLoading(true);
     setError('');
     setSuccess('');
 
     try {
-      const idToken = response.credential;
-      if (!idToken) throw new Error('No credential received from Google.');
-
       const decoded = parseJwt(idToken);
       if (!decoded || !decoded.email) {
         throw new Error('Failed to read email from Google token.');
       }
 
-      console.log('[Google GSI] Decoded:', { email: decoded.email, name: decoded.name });
+      console.log('[Google OAuth] Decoded:', { email: decoded.email, name: decoded.name });
 
       const data = await ApiService.post('/auth/google', {
         email: decoded.email,
@@ -71,7 +68,7 @@ export default function LoginPage() {
         role: 'DONOR',
       });
 
-      console.log('[Google GSI] Backend authentication successful.');
+      console.log('[Google OAuth] Backend authentication successful.');
       setSuccess('Authenticated via Google! Redirecting...');
       login(data.token, data.user);
 
@@ -82,87 +79,50 @@ export default function LoginPage() {
       }, 1200);
 
     } catch (err: any) {
-      console.error('[Google GSI Error]', err);
-      setError(err.message || 'Google authentication failed. Please try again.');
+      console.error('[Google OAuth Error]', err);
+      let errMsg = err.message || 'Google authentication failed. Please try again.';
+      if (err.stackTrace) {
+        errMsg += `\n\n[Backend Error Stack]:\n${err.stackTrace}`;
+      }
+      setError(errMsg);
       setGoogleLoading(false);
     }
   }, [login, router]);
 
-  // Load Google Identity Services script
-  useEffect(() => {
-    // Expose callback globally so GSI can call it
-    window.handleGoogleCredentialResponse = handleGoogleCredentialResponse;
-
-    if (typeof window !== 'undefined' && !window.google) {
-      const script = document.createElement('script');
-      script.src = 'https://accounts.google.com/gsi/client';
-      script.async = true;
-      script.defer = true;
-      script.onload = () => {
-        console.log('[Google GSI] Script loaded.');
-        initializeGSI();
-      };
-      script.onerror = () => {
-        console.error('[Google GSI] Failed to load script.');
-        setError('Failed to load Google Sign-In. Please check your connection.');
-      };
-      document.head.appendChild(script);
-    } else if (window.google) {
-      initializeGSI();
-    }
-
-    return () => {
-      delete window.handleGoogleCredentialResponse;
-    };
-  }, [handleGoogleCredentialResponse]);
-
-  const initializeGSI = () => {
-    if (!window.google) return;
-    try {
+  const initializeGSI = useCallback(() => {
+    if (window.google) {
       window.google.accounts.id.initialize({
         client_id: GOOGLE_CLIENT_ID,
-        callback: handleGoogleCredentialResponse,
-        auto_select: false,
-        cancel_on_tap_outside: true,
+        callback: (response: any) => {
+          if (response.credential) {
+            handleGoogleSuccess(response.credential);
+          }
+        },
+        use_fedcm_for_prompt: false, // Disables FedCM to avoid One Tap errors
       });
-      console.log('[Google GSI] Initialized successfully.');
-      setGsiReady(true);
-    } catch (err) {
-      console.error('[Google GSI] Initialization failed:', err);
-    }
-  };
 
-  // Trigger GSI popup when button clicked
-  const handleGoogleLogin = () => {
-    setError('');
-    setSuccess('');
-
-    if (!window.google) {
-      setError('Google Sign-In is not loaded yet. Please wait and try again.');
-      return;
+      const btnContainer = document.getElementById('google-signin-btn');
+      if (btnContainer) {
+        window.google.accounts.id.renderButton(
+          btnContainer,
+          {
+            theme: 'outline',
+            size: 'large',
+            width: btnContainer.clientWidth || 384, // render full width
+            text: 'continue_with',
+            shape: 'rectangular',
+          }
+        );
+      }
     }
+  }, [handleGoogleSuccess]);
 
-    try {
-      console.log('[Google GSI] Prompting popup...');
-      setGoogleLoading(true);
-      window.google.accounts.id.prompt((notification: any) => {
-        if (notification.isNotDisplayed()) {
-          console.warn('[Google GSI] Prompt not displayed:', notification.getNotDisplayedReason());
-          // Fallback: render the button popup manually
-          setGoogleLoading(false);
-          setError('Google popup was blocked. Please allow popups for this site and try again.');
-        }
-        if (notification.isDismissedMoment()) {
-          console.log('[Google GSI] User dismissed the prompt.');
-          setGoogleLoading(false);
-        }
-      });
-    } catch (err: any) {
-      console.error('[Google GSI] Prompt error:', err);
-      setError('Failed to open Google Sign-In. Please try again.');
-      setGoogleLoading(false);
+  // If window.google is already loaded, render button immediately
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.google) {
+      initializeGSI();
     }
-  };
+  }, [initializeGSI]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -188,7 +148,11 @@ export default function LoginPage() {
       }, 1200);
 
     } catch (err: any) {
-      setError(err.message || 'Login failed. Please check credentials.');
+      let errMsg = err.message || 'Login failed. Please check credentials.';
+      if (err.stackTrace) {
+        errMsg += `\n\n[Backend Error Stack]:\n${err.stackTrace}`;
+      }
+      setError(errMsg);
     } finally {
       setLoading(false);
     }
@@ -205,8 +169,8 @@ export default function LoginPage() {
         </div>
 
         {error && (
-          <div className="bg-red-500/10 border border-red-500/25 p-3 rounded-lg flex items-center gap-2.5 text-xs text-red-400 mb-6">
-            <ShieldAlert className="h-5 w-5 shrink-0" />
+          <div className="bg-red-500/10 border border-red-500/25 p-3 rounded-lg flex items-start gap-2.5 text-xs text-red-400 mb-6 whitespace-pre-wrap font-mono max-h-60 overflow-y-auto">
+            <ShieldAlert className="h-5 w-5 shrink-0 mt-0.5" />
             <span>{error}</span>
           </div>
         )}
@@ -283,23 +247,15 @@ export default function LoginPage() {
           <div className="flex-grow border-t border-white/5"></div>
         </div>
 
-        <button
-          onClick={handleGoogleLogin}
-          disabled={googleLoading}
-          className="w-full border border-white/10 hover:border-white/20 hover:bg-white/5 text-slate-200 py-3.5 px-4 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2.5 disabled:opacity-60"
-        >
-          {googleLoading ? (
-            <RefreshCw className="h-4 w-4 animate-spin text-brand-500" />
-          ) : (
-            <svg className="h-4 w-4" viewBox="0 0 24 24">
-              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
-              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
-            </svg>
-          )}
-          <span>{googleLoading ? 'Connecting Google...' : 'Continue with Google'}</span>
-        </button>
+        <div className="w-full flex justify-center mt-2 min-h-[44px]">
+          <div id="google-signin-btn" className="w-full"></div>
+        </div>
+
+        <Script
+          src="https://accounts.google.com/gsi/client"
+          strategy="afterInteractive"
+          onLoad={initializeGSI}
+        />
 
         <p className="text-center text-xs text-slate-500 mt-8">
           Don't have a surplus routing profile?{' '}

@@ -61,6 +61,18 @@ export default function DonorDashboard() {
     }
   }, [mounted, isAuthenticated]);
 
+  // Synchronize with real-time updates via Socket.io broadcast CustomEvents
+  useEffect(() => {
+    const handleDonationUpdate = () => {
+      console.log('[DonorDashboard] Real-time donation update triggered. Refetching...');
+      fetchDashboardData();
+    };
+    window.addEventListener('donation_update', handleDonationUpdate);
+    return () => {
+      window.removeEventListener('donation_update', handleDonationUpdate);
+    };
+  }, []);
+
   if (loading) {
     return (
       <div className="flex-grow flex flex-col items-center justify-center py-20 text-center">

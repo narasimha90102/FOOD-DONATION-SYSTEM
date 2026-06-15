@@ -1,3 +1,15 @@
+export class ApiError extends Error {
+  status: number;
+  stackTrace?: string;
+
+  constructor(message: string, status: number, stackTrace?: string) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.stackTrace = stackTrace;
+  }
+}
+
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://food-donation-system-pqfz.onrender.com/api';
 
 interface FetchOptions extends RequestInit {
@@ -48,7 +60,7 @@ export class ApiService {
             window.location.href = '/auth/login';
           }
         }
-        throw new Error(data.message || `Request failed with status ${response.status}`);
+        throw new ApiError(data.message || `Request failed with status ${response.status}`, response.status, data.stack);
       }
 
       return data;

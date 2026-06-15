@@ -41,11 +41,11 @@ export const errorHandler = (
   }
 
   const statusCode = error.statusCode || err.statusCode || 500;
-  const message = error.message || 'Internal Server Error';
+  const message = err.message || error.message || 'Internal Server Error';
 
   res.status(statusCode).json({
     success: false,
     message,
-    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
+    stack: err.stack,
   });
 };

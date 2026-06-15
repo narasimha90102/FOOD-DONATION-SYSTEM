@@ -94,11 +94,30 @@ export const useAppStore = create<AppState>((set) => {
     if (typeof window !== 'undefined') {
       const storedToken = localStorage.getItem('fb_token');
       const storedUser = localStorage.getItem('fb_user');
-      return {
-        token: storedToken,
-        user: storedUser ? JSON.parse(storedUser) : null,
-        isAuthenticated: !!storedToken,
-      };
+      let parsedUser = null;
+      try {
+        if (storedUser) {
+          parsedUser = JSON.parse(storedUser);
+        }
+      } catch (e) {
+        console.error('[AppStore] Error parsing stored user JSON:', e);
+        localStorage.removeItem('fb_user');
+        localStorage.removeItem('fb_token');
+        return { token: null, user: null, isAuthenticated: false };
+      }
+
+      if (storedToken && parsedUser) {
+        return {
+          token: storedToken,
+          user: parsedUser,
+          isAuthenticated: true,
+        };
+      } else {
+        // Clear potential half-login state
+        localStorage.removeItem('fb_user');
+        localStorage.removeItem('fb_token');
+        return { token: null, user: null, isAuthenticated: false };
+      }
     }
     return { token: null, user: null, isAuthenticated: false };
   };

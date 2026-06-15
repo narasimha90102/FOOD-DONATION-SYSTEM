@@ -104,6 +104,9 @@ export const createDonation = async (req: AuthRequest, res: Response, next: Next
       donation,
       nearestNGOsCount: matchedNGOs.length,
     });
+
+    // Broadcast donation creation event to all users for real-time synchronization
+    SocketService.broadcast('donation_created', donation);
   } catch (error) {
     next(error);
   }
@@ -119,13 +122,19 @@ export const getDonations = async (req: AuthRequest, res: Response, next: NextFu
     const { status } = req.query;
     const query: any = {};
 
-    // Donors see their own uploads
+    // Donors see all PENDING listings globally, plus their own listings
     if (req.user?.role === 'DONOR') {
-      query.donor = req.user._id;
+      query.$or = [
+        { donor: req.user._id },
+        { status: 'PENDING' }
+      ];
     }
-    // NGOs see donations they have accepted
+    // NGOs see all PENDING listings globally, plus those they have accepted
     else if (req.user?.role === 'NGO') {
-      query.ngo = req.user._id;
+      query.$or = [
+        { ngo: req.user._id },
+        { status: 'PENDING' }
+      ];
     }
 
     if (status) {
@@ -276,6 +285,9 @@ export const acceptDonation = async (req: AuthRequest, res: Response, next: Next
     donation.statusHistory.push({ status: 'ACCEPTED', updatedBy: req.user._id, updatedAt: new Date() });
     await donation.save();
 
+    // Broadcast update event to all users for real-time synchronization
+    SocketService.broadcast('donation_updated', donation);
+
     // Establish a real-time Chat room automatically for this pipeline
     let chat = await Chat.findOne({ donation: donation._id });
     if (!chat) {
@@ -337,6 +349,9 @@ export const updateDonationStatus = async (req: AuthRequest, res: Response, next
     donation.status = status;
     donation.statusHistory.push({ status, updatedBy: (req.user?._id || donation.donor) as any, updatedAt: new Date() });
     await donation.save();
+
+    // Broadcast update event to all users for real-time synchronization
+    SocketService.broadcast('donation_updated', donation);
 
     const donorIdStr = donation.donor.toString();
     const ngoIdStr = donation.ngo ? donation.ngo.toString() : '';
@@ -442,13 +457,13 @@ export const getDonorStats = async (req: AuthRequest, res: Response, next: NextF
   try {
     const userId = req.user?._id;
     
-    const activeDonationsCount    = await Donation.countDocuments({ donor: userId, status: { $in: ['PENDING', 'ACCEPTED', 'PICKED_UP'] } });
-    const completedDonationsCount = await Donation.countDocuments({ donor: userId, status: 'COMPLETED' });
-    const totalDonationsPosted    = await Donation.countDocuments({ donor: userId });
+    // Active Listings count shows the real count of all active (PENDING) donations in the database
+    const activeDonationsCount    = await Donation.countDocuments({ status: 'PENDING' });
+    const completedDonationsCount = await Donation.countDocuments({ status: 'COMPLETED' });
+    const totalDonationsPosted    = await Donation.countDocuments();
 
-    // Sum up total quantity ever donated (kg/servings) for all-time impact display
+    // Sum up total quantity ever donated globally in the DB
     const quantityAgg = await Donation.aggregate([
-      { $match: { donor: userId } },
       { $group: { _id: null, totalQty: { $sum: '$quantity' } } },
     ]);
     const totalQuantity = quantityAgg[0]?.totalQty || 0;

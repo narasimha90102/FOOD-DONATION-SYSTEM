@@ -141,7 +141,6 @@ const UserSchema = new Schema<IUser>(
 
 // Indexes
 UserSchema.index({ location: '2dsphere' });
-UserSchema.index({ email: 1 });
 
 UserSchema.pre('save', async function (this: any, next) {
   if (!this.isModified('password')) {
