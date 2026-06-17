@@ -12,6 +12,8 @@ frontend/out/
 mobile/.expo/
 mobile/dist/
 mobile/web-build/
+mobile/android/
+copy-apk.ps1
 *.jks
 *.p8
 *.p12

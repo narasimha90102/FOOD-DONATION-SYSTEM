@@ -1,7 +1,7 @@
 import { useAppStore } from '../store/useAppStore';
 
 // We map both local emulator networks (10.0.2.2 for Android, 127.0.0.1 for iOS)
-const BASE_URL = 'http://10.0.2.2:5003/api';
+const BASE_URL = 'http://192.168.250.55:5003/api';
 
 export class MobileApiService {
   private static async request(endpoint: string, method: string = 'GET', body?: any): Promise<any> {
