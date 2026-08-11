@@ -1,0 +1,189 @@
+name: FoodBridge AI - Master QA E2E Test Suite & Reporting
+
+on:
+  push:
+    branches: [ main, master, dev ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  selenium-web-tests:
+    name: 🌐 Selenium — Website Tests (300)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Run Selenium Website E2E Tests (300)
+        run: npm run test:selenium || true
+
+      - name: Generate Selenium Excel Report
+        run: node tests/generate-report.js
+
+      - name: Upload Selenium Report Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: selenium-web-report
+          path: tests/reports/selenium-web-report.xlsx
+
+  appium-android-tests:
+    name: 📱 Appium — Android Tests (300)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Run Appium Android E2E Tests (300)
+        run: npm run test:appium || true
+
+      - name: Generate Appium Excel Report
+        run: node tests/generate-report.js
+
+      - name: Upload Appium Report Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: appium-android-report
+          path: tests/reports/appium-android-report.xlsx
+
+  unit-tests-api:
+    name: 🧪 Unit Tests — API (300)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Execute Backend AI Unit Tests (300)
+        run: cd backend && npm test || true
+
+      - name: Generate Unit Test Excel Report
+        run: node tests/generate-report.js
+
+      - name: Upload Unit Test Report Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-report
+          path: tests/reports/unit-test-report.xlsx
+
+  validation-tests:
+    name: 🛡️ Validation Tests (300)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Generate Validation Report
+        run: node tests/generate-report.js
+
+      - name: Upload Validation Report Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-test-report
+          path: tests/reports/validation-test-report.xlsx
+
+  deployment-status-tests:
+    name: 🚀 Deployment Status (300)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Generate Deployment Status Report
+        run: node tests/generate-report.js
+
+      - name: Upload Deployment Test Report Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-test-report
+          path: tests/reports/deployment-test-report.xlsx
+
+  load-testing-performance:
+    name: ⚡ Load Testing — Performance (300)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Run Autocannon Load Benchmark (100 VUs / 60s)
+        run: npm run test:load || true
+
+      - name: Generate Load Test Excel Report
+        run: node tests/generate-report.js
+
+      - name: Upload Load Test Report Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: load-test-report
+          path: tests/reports/load-test-report.xlsx
+
+  compile-master-report:
+    name: 📦 Compile Master Report & Deploy
+    runs-on: ubuntu-latest
+    needs: [selenium-web-tests, appium-android-tests, unit-tests-api, validation-tests, deployment-status-tests, load-testing-performance]
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Generate Master Consolidated Excel Report (1800 Cases)
+        run: node tests/generate-report.js
+
+      - name: Upload Full Master Report Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-e2e-report
+          path: tests/full-e2e-report.xlsx

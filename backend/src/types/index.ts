@@ -1,8 +1,24 @@
 import { Document, Types } from 'mongoose';
 
-export type UserRole = 'DONOR' | 'NGO' | 'ADMIN';
+export type UserRole = 'DONOR' | 'NGO' | 'ADMIN' | 'VOLUNTEER';
 export type NGOVerificationStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'NONE';
-export type DonationStatus = 'PENDING' | 'ACCEPTED' | 'PICKED_UP' | 'DELIVERED' | 'COMPLETED';
+export type DonationStatus =
+  | 'PENDING'
+  | 'AI_SCREENING'
+  | 'APPROVED'
+  | 'NGO_MATCHED'
+  | 'NGO_ACCEPTED'
+  | 'VOLUNTEER_ASSIGNED'
+  | 'GOING_TO_PICKUP'
+  | 'PICKED_UP'
+  | 'IN_TRANSIT'
+  | 'DELIVERED'
+  | 'DISTRIBUTED'
+  | 'REDISTRIBUTED_TO_BENEFICIARIES'
+  | 'COMPLETED'
+  | 'REJECTED'
+  | 'CANCELLED'
+  | 'EXPIRED';
 
 export interface IRating {
   raterId: Types.ObjectId | string;
@@ -42,6 +58,10 @@ export interface IUser extends Document {
   address: string;
   phoneNumber?: string;
   isBlocked: boolean;
+  volunteerAvailability?: 'AVAILABLE' | 'BUSY' | 'OFFLINE';
+  volunteerStatus?: 'ACTIVE' | 'INACTIVE';
+  approvalStatus?: 'pending' | 'approved' | 'rejected';
+  status?: 'pending' | 'active' | 'rejected';
   matchPassword(enteredPassword: string): Promise<boolean>;
   createdAt: Date;
   updatedAt: Date;
@@ -50,6 +70,7 @@ export interface IUser extends Document {
 export interface IDonation extends Document {
   donor: Types.ObjectId | string | IUser;
   ngo?: Types.ObjectId | string | IUser;
+  volunteer?: Types.ObjectId | string | IUser;
   foodName: string;
   foodCategory: string;
   quantity: number;
@@ -59,6 +80,11 @@ export interface IDonation extends Document {
   storageCondition: 'ambient' | 'refrigerated' | 'frozen';
   pickupAddress: string;
   location: {
+    type: 'Point';
+    coordinates: [number, number]; // [longitude, latitude]
+  };
+  destinationAddress?: string;
+  destinationLocation?: {
     type: 'Point';
     coordinates: [number, number]; // [longitude, latitude]
   };
@@ -74,6 +100,19 @@ export interface IDonation extends Document {
   aiFreshnessScore?: number;
   aiRiskLevel?: 'safe' | 'warning' | 'danger';
   aiRecommendation?: string;
+  distribution?: {
+    distributedQuantity: number;
+    beneficiariesCount: number;
+    distributionDate: Date;
+    location: string;
+    remainingQuantity: number;
+    notes?: string;
+  };
+  cancelledBy?: Types.ObjectId | string | IUser;
+  cancelledByRole?: 'DONOR' | 'NGO' | 'ADMIN' | 'VOLUNTEER';
+  cancellationReason?: string;
+  cancellationProof?: string;
+  cancelledAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -112,6 +151,9 @@ export interface INotification extends Document {
     | 'CHAT';
   read: boolean;
   relatedId?: Types.ObjectId | string;
+  recipientRole?: string;
+  relatedType?: string;
+  navigationRoute?: string;
   createdAt: Date;
   updatedAt: Date;
 }

@@ -1,3 +1,5 @@
+@import "leaflet/dist/leaflet.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -84,4 +86,10 @@
 
 .animate-glow {
   animation: pulse-glow 3s ease-in-out infinite;
+}
+
+/* Make calendar picker icon white in dark theme inputs */
+input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) brightness(100%);
+  cursor: pointer;
 }

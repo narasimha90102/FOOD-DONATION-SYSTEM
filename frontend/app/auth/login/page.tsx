@@ -75,6 +75,7 @@ export default function LoginPage() {
       setTimeout(() => {
         if (data.user.role === 'ADMIN') router.push('/admin');
         else if (data.user.role === 'NGO') router.push('/ngo');
+        else if (data.user.role === 'VOLUNTEER') router.push('/volunteer');
         else router.push('/donor');
       }, 1200);
 
@@ -144,15 +145,22 @@ export default function LoginPage() {
       setTimeout(() => {
         if (data.user.role === 'ADMIN') router.push('/admin');
         else if (data.user.role === 'NGO') router.push('/ngo');
+        else if (data.user.role === 'VOLUNTEER') router.push('/volunteer');
         else router.push('/donor');
       }, 1200);
 
     } catch (err: any) {
-      let errMsg = err.message || 'Login failed. Please check credentials.';
-      if (err.stackTrace) {
-        errMsg += `\n\n[Backend Error Stack]:\n${err.stackTrace}`;
+      if (err.code === 'ACCOUNT_PENDING_APPROVAL' || (err.status === 403 && err.message?.includes('waiting for admin approval'))) {
+        setError(
+          `Waiting for Admin Approval ⏳\n\nYour account has been successfully registered but is waiting for administrator approval. Please try again after your account is approved.`
+        );
+      } else {
+        let errMsg = err.message || 'Login failed. Please check credentials.';
+        if (err.stackTrace) {
+          errMsg += `\n\n[Backend Error Stack]:\n${err.stackTrace}`;
+        }
+        setError(errMsg);
       }
-      setError(errMsg);
     } finally {
       setLoading(false);
     }

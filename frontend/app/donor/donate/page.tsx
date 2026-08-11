@@ -6,11 +6,15 @@ import { ApiService } from '../../../services/api';
 import { useAppStore } from '../../../store/useAppStore';
 import { InputWithIcon } from '../../../components/InputWithIcon';
 import { Sparkles, Calendar, MapPin, Navigation, ShieldCheck, ShieldAlert, CheckCircle2, RefreshCw } from 'lucide-react';
+import LocationPicker from '../../../components/LocationPicker';
 import confetti from 'canvas-confetti';
+import { formatDateTime } from '../../../utils/formatDate';
 
 export default function DonatePage() {
   const router = useRouter();
   const { user } = useAppStore();
+
+  const [id, setId] = useState<string | null>(null);
 
   const [foodName, setFoodName] = useState('');
   const [foodCategory, setFoodCategory] = useState('Veg Meal');
@@ -20,28 +24,136 @@ export default function DonatePage() {
   const [expTime, setExpTime] = useState('');
   const [storage, setStorage] = useState<'ambient' | 'refrigerated' | 'frozen'>('ambient');
   const [address, setAddress] = useState('');
-  const [lng, setLng] = useState('77.5946');
-  const [lat, setLat] = useState('12.9716');
+  // Coordinates are stored as strings for form submission
+  // null means no GPS yet obtained — let LocationPicker auto-trigger GPS
+  const [lng, setLng] = useState<string | null>(null);
+  const [lat, setLat] = useState<string | null>(null);
   const [instructions, setInstructions] = useState('');
 
   // AI Predict variables
   const [aiPredict, setAiPredict] = useState<any>(null);
   const [checkingAi, setCheckingAi] = useState(false);
+  const [aiError, setAiError] = useState('');
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // Set default times on mount
+  const [minDateTime, setMinDateTime] = useState('');
+
+  const [showExpiryModal, setShowExpiryModal] = useState(false);
+  const [tempExpTime, setTempExpTime] = useState('');
+  const [modalError, setModalError] = useState('');
+
+  const handleExpiryConfirm = () => {
+    if (!tempExpTime) {
+      setModalError('Please select a valid date and time.');
+      return;
+    }
+
+    const selectedTime = new Date(tempExpTime).getTime();
+    const currentTime = Date.now();
+
+    if (selectedTime <= currentTime) {
+      setModalError('Estimated expiry time must be later than the current time.');
+      return;
+    }
+
+    setExpTime(tempExpTime);
+    setShowExpiryModal(false);
+    setModalError('');
+  };
+
+  const openExpiryModal = () => {
+    setTempExpTime(expTime || '');
+    setModalError('');
+    setShowExpiryModal(true);
+  };
+
   useEffect(() => {
+    const updateMinDateTime = () => {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      setMinDateTime(`${year}-${month}-${day}T${hours}:${minutes}`);
+    };
+
+    updateMinDateTime();
+    const interval = setInterval(updateMinDateTime, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Extract ID on client side
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const urlId = params.get('id');
+      if (urlId) {
+        setId(urlId);
+      }
+    }
+  }, []);
+
+  // Fetch details in edit mode
+  useEffect(() => {
+    if (!id) return;
+
+    const fetchDetails = async () => {
+      try {
+        setLoading(true);
+        const res = await ApiService.get(`/donations/${id}`);
+        const don = res.donation;
+        if (don) {
+          setFoodName(don.foodName || '');
+          setFoodCategory(don.foodCategory || 'Veg Meal');
+          setQuantity(don.quantity ? don.quantity.toString() : '10');
+          setUnit(don.unit || 'Servings');
+          
+          if (don.preparationTime) {
+            setPrepTime(new Date(don.preparationTime).toISOString().slice(0, 16));
+          }
+          if (don.estimatedExpiryTime) {
+            const expStr = new Date(don.estimatedExpiryTime).toISOString().slice(0, 16);
+            setExpTime(expStr);
+            setTempExpTime(expStr);
+          }
+          setStorage(don.storageCondition || 'ambient');
+          setAddress(don.pickupAddress || '');
+          if (don.location?.coordinates && don.location.coordinates.length === 2) {
+            setLng(don.location.coordinates[0].toString());
+            setLat(don.location.coordinates[1].toString());
+          }
+          setInstructions(don.specialInstructions || '');
+        }
+      } catch (err: any) {
+        setError(err.message || 'Error fetching food listing details.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDetails();
+  }, [id]);
+
+  // Set default times on mount (create mode only)
+  useEffect(() => {
+    if (id) return;
     const now = new Date();
     const formattedPrep = now.toISOString().slice(0, 16); // yyyy-MM-ddThh:mm
     const formattedExp = new Date(now.getTime() + 12 * 60 * 60 * 1000).toISOString().slice(0, 16); // +12 hours
     
     setPrepTime(formattedPrep);
     setExpTime(formattedExp);
-    setAddress(user?.address || '12, MG Road, Tech Sector');
-  }, [user]);
+    setTempExpTime(formattedExp);
+    // Default address from user profile if available — NOT a hardcoded fallback
+    if (user?.address) {
+      setAddress(user.address);
+    }
+    // Coordinates in create mode start as null — LocationPicker will call GPS automatically
+  }, [user, id]);
 
   // Run AI predictor dynamically when inputs change
   useEffect(() => {
@@ -53,6 +165,7 @@ export default function DonatePage() {
   const triggerAIPrediction = async () => {
     try {
       setCheckingAi(true);
+      setAiError('');
       const prediction = await ApiService.post('/ai/predict', {
         foodCategory,
         preparationTime: new Date(prepTime),
@@ -61,15 +174,10 @@ export default function DonatePage() {
       });
 
       setAiPredict(prediction.prediction);
-    } catch (err) {
-      console.warn('[AI Predict Error] Client calculations fallback:', err);
-      // Hard fallback dynamic estimation if server health check has high latency
-      setAiPredict({
-        aiFreshnessScore: 85,
-        aiSafeWindowHours: 8.5,
-        aiRiskLevel: 'safe',
-        aiRecommendation: 'Safe to consume. Check smells/odor at pickup.',
-      });
+    } catch (err: any) {
+      console.error('[AI Predict Error] Ollama service down:', err);
+      setAiError(err.message || 'Local AI service is unavailable. Please start Ollama.');
+      setAiPredict(null);
     } finally {
       setCheckingAi(false);
     }
@@ -79,6 +187,28 @@ export default function DonatePage() {
     e.preventDefault();
     if (!foodName || !foodCategory || !quantity || !unit || !prepTime || !expTime || !address) {
       setError('Please provide all mandatory listing values.');
+      return;
+    }
+
+    const now = new Date();
+    const expiryDate = new Date(expTime);
+    if (expiryDate <= now) {
+      setError('Estimated expiry time must be later than the current time.');
+      return;
+    }
+
+    // ── CRITICAL: Block submission if GPS coordinates have not been obtained ──
+    const parsedLng = lng !== null ? Number(lng) : null;
+    const parsedLat = lat !== null ? Number(lat) : null;
+
+    if (
+      parsedLng === null || parsedLat === null ||
+      isNaN(parsedLng) || isNaN(parsedLat) ||
+      (parsedLng === 0 && parsedLat === 0)
+    ) {
+      setError(
+        'Pickup location coordinates are required. Please allow location access, or search for and pin your exact pickup address on the map before submitting.'
+      );
       return;
     }
 
@@ -96,14 +226,19 @@ export default function DonatePage() {
         estimatedExpiryTime: new Date(expTime),
         storageCondition: storage,
         pickupAddress: address,
-        coordinates: [Number(lng), Number(lat)],
+        // Use validated, non-zero coordinates — parsedLng/parsedLat are guaranteed valid here
+        coordinates: [parsedLng, parsedLat],
         specialInstructions: instructions,
         foodImages: ['https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=400&q=80'],
       };
 
-      await ApiService.post('/donations', payload);
-
-      setSuccess('Surplus posted successfully! Notified closest NGOs.');
+      if (id) {
+        await ApiService.put(`/donations/${id}`, payload);
+        setSuccess('Food listing updated successfully!');
+      } else {
+        await ApiService.post('/donations', payload);
+        setSuccess('Surplus posted successfully! Notified closest NGOs.');
+      }
       
       // Dynamic Points Confetti Reward visual
       confetti({
@@ -114,7 +249,7 @@ export default function DonatePage() {
       });
 
       setTimeout(() => {
-        router.push('/donor');
+        router.push(user?.role === 'ADMIN' ? '/admin/donations' : '/donor');
       }, 1500);
 
     } catch (err: any) {
@@ -128,8 +263,14 @@ export default function DonatePage() {
     <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex flex-col gap-8">
       
       <div className="border-b border-white/5 pb-4">
-        <h1 className="text-3xl font-bold text-white text-outfit">Post Food Surplus</h1>
-        <p className="text-slate-400 text-sm mt-1">Input surplus specifications. Our AI will automatically verify biological freshness thresholds.</p>
+        <h1 className="text-3xl font-bold text-white text-outfit">
+          {id ? 'Edit Food Surplus Listing' : 'Post Food Surplus'}
+        </h1>
+        <p className="text-slate-400 text-sm mt-1">
+          {id 
+            ? 'Modify existing surplus details. Changes will automatically update active NGO matching indexes.' 
+            : 'Input surplus specifications. Our AI will automatically verify biological freshness thresholds.'}
+        </p>
       </div>
 
       {error && (
@@ -234,58 +375,38 @@ export default function DonatePage() {
               disabled={loading}
             />
 
-            <InputWithIcon
-              type="datetime-local"
-              id="donate-exptime"
-              label="Estimated Expiry Time"
-              value={expTime}
-              onChange={(e) => setExpTime(e.target.value)}
-              icon={Calendar}
-              required
-              disabled={loading}
-            />
-          </div>
-
-          <div className="border-t border-white/5 pt-6 space-y-4">
-            <span className="text-brand-500 text-xs font-bold uppercase tracking-wider block">Pickup Coordinates</span>
-            
-            <InputWithIcon
-              type="text"
-              id="donate-address"
-              label="Full Pickup Address"
-              placeholder="Street address, building floor"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              icon={MapPin}
-              required
-              disabled={loading}
-            />
-
-            <div className="grid grid-cols-2 gap-6">
+            <div onClick={openExpiryModal} className="cursor-pointer">
               <InputWithIcon
-                type="number"
-                step="0.000001"
-                id="donate-lng"
-                label="Longitude Coordinates"
-                value={lng}
-                onChange={(e) => setLng(e.target.value)}
-                icon={Navigation}
-                required
-                disabled={loading}
-              />
-
-              <InputWithIcon
-                type="number"
-                step="0.000001"
-                id="donate-lat"
-                label="Latitude Coordinates"
-                value={lat}
-                onChange={(e) => setLat(e.target.value)}
-                icon={Navigation}
+                type="text"
+                id="donate-exptime"
+                label="Estimated Expiry Time"
+                value={expTime ? formatDateTime(expTime) : ''}
+                readOnly
+                placeholder="Click to select expiry date & time..."
+                icon={Calendar}
                 required
                 disabled={loading}
               />
             </div>
+          </div>
+
+          <div className="border-t border-white/5 pt-6 space-y-4">
+            <span className="text-brand-500 text-xs font-bold uppercase tracking-wider block">Pickup Location Selection</span>
+            
+            <LocationPicker
+              initialAddress={address}
+              // In edit mode pass saved coordinates; in create mode pass nothing so GPS auto-triggers
+              initialCoordinates={
+                lng !== null && lat !== null
+                  ? [Number(lng), Number(lat)]
+                  : undefined
+              }
+              onChange={({ address: newAddr, coordinates }) => {
+                setAddress(newAddr);
+                setLng(coordinates[0].toString());
+                setLat(coordinates[1].toString());
+              }}
+            />
           </div>
 
           <div>
@@ -305,7 +426,7 @@ export default function DonatePage() {
             className="w-full bg-brand-500 hover:bg-brand-600 disabled:bg-brand-500/50 text-dark-900 font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-2 text-md shadow-xl hover:shadow-brand-500/20"
           >
             {loading ? <RefreshCw className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5" />}
-            <span>{loading ? 'Redistributing surplus...' : 'Submit Food Donation Listing'}</span>
+            <span>{loading ? (id ? 'Updating details...' : 'Redistributing surplus...') : (id ? 'Save Changes' : 'Submit Food Donation Listing')}</span>
           </button>
         </form>
 
@@ -328,6 +449,21 @@ export default function DonatePage() {
               <div className="py-20 text-center flex flex-col items-center justify-center gap-3">
                 <RefreshCw className="h-6 w-6 text-brand-500 animate-spin" />
                 <span className="text-xs text-slate-500">Checking microbial growth rates...</span>
+              </div>
+            ) : aiError ? (
+              <div className="bg-red-500/10 border border-red-500/25 p-4 rounded-xl flex flex-col gap-2 text-red-400 text-xs text-left leading-relaxed">
+                <div className="flex items-center gap-2 font-bold">
+                  <ShieldAlert className="h-4.5 w-4.5 shrink-0" />
+                  <span>AI Verification Unavailable</span>
+                </div>
+                <p className="text-slate-300">{aiError}</p>
+                <button
+                  type="button"
+                  onClick={triggerAIPrediction}
+                  className="mt-2 w-full bg-red-500/15 hover:bg-red-500/25 border border-red-500/20 text-red-300 font-bold py-2 rounded-lg text-[10px] uppercase transition-colors"
+                >
+                  Retry Scan
+                </button>
               </div>
             ) : aiPredict ? (
               <div className="flex flex-col gap-6 text-center">
@@ -391,6 +527,66 @@ export default function DonatePage() {
         </div>
 
       </div>
+
+      {/* Custom Expiry picker modal with OK confirmation */}
+      {showExpiryModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-md p-4">
+          <div className="w-full max-w-md glass-panel p-6 border-white/10 shadow-2xl space-y-5 text-left animate-in fade-in zoom-in-95 duration-200">
+            <div>
+              <h3 className="text-lg font-bold text-white text-outfit">Set Estimated Expiry Time</h3>
+              <p className="text-xs text-slate-400 mt-1">
+                Surplus listing availability must be set strictly in the future.
+              </p>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Expiry Date & Time</label>
+                <input
+                  type="datetime-local"
+                  min={minDateTime}
+                  value={tempExpTime}
+                  onChange={(e) => {
+                    setTempExpTime(e.target.value);
+                    setModalError('');
+                  }}
+                  className="w-full glass-input text-white focus:border-brand-500 text-sm"
+                  style={{
+                    colorScheme: 'dark',
+                  }}
+                />
+              </div>
+
+              {modalError && (
+                <div className="text-xs font-semibold text-red-400 bg-red-500/10 border border-red-500/20 p-2.5 rounded-lg flex items-center gap-2">
+                  <ShieldAlert className="h-4 w-4 shrink-0 text-red-400" />
+                  <span>{modalError}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowExpiryModal(false);
+                  setModalError('');
+                }}
+                className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all text-sm font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleExpiryConfirm}
+                className="px-4 py-2 rounded-lg bg-brand-500 text-dark-900 hover:bg-brand-600 transition-all text-sm font-bold shadow-lg hover:shadow-brand-500/20"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

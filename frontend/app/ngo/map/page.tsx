@@ -15,8 +15,10 @@ function MapContent() {
   const [donation, setDonation] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [distance, setDistance] = useState<number>(0);
-  const [eta, setEta] = useState<string>('Calculated on status update');
+  const [eta, setEta] = useState<string>('Calculating...');
   const [routeProgress, setRouteProgress] = useState<number>(0);
+  const [gpsError, setGpsError] = useState<string | null>(null);
+  const [gpsCoords, setGpsCoords] = useState<[number, number] | null>(null);
 
   useEffect(() => {
     const donationId = searchParams.get('id');
@@ -25,25 +27,35 @@ function MapContent() {
       return;
     }
 
-    const fetchDonation = async () => {
+    const fetchDonation = async (liveGpsCoords?: [number, number]) => {
       try {
         const res = await ApiService.get(`/donations/${donationId}`);
         setDonation(res.donation);
 
         // Determine dynamic route parameters
-        const donorCoords = res.donation.location.coordinates;
-        const ngoCoords = user?.location?.coordinates || [77.5946, 12.9716];
+        const donorCoords = res.donation.location.coordinates; // [lng, lat]
 
-        // Haversine Distance computation
-        const computedDist = calculateHaversine(
-          donorCoords[1], donorCoords[0],
-          ngoCoords[1], ngoCoords[0]
-        );
-        setDistance(computedDist);
+        // Use live GPS if available — NEVER hardcoded fallback
+        const coordsToUse = liveGpsCoords || gpsCoords;
+        if (!coordsToUse) {
+          // GPS not yet obtained — distance can be calculated once GPS arrives
+          setEta('Waiting for your current location...');
+          setRouteProgress(0);
+        } else {
+          const ngoLng = coordsToUse[0];
+          const ngoLat = coordsToUse[1];
 
-        // ETA Estimation
-        const computedEta = Math.round(computedDist * 4 + 8); // ~4 mins per km + buffer
-        setEta(`${computedEta} Minutes`);
+          // Haversine Distance computation
+          const computedDist = calculateHaversine(
+            donorCoords[1], donorCoords[0],
+            ngoLat, ngoLng
+          );
+          setDistance(computedDist);
+
+          // ETA Estimation
+          const computedEta = Math.round(computedDist * 4 + 8); // ~4 mins per km + buffer
+          setEta(`${computedEta} Minutes`);
+        }
 
         // Route animation progress based on pipeline status
         let progress = 0;
@@ -59,7 +71,30 @@ function MapContent() {
       }
     };
 
-    fetchDonation();
+    // Get live GPS position first, then fetch donation details
+    if (typeof window !== 'undefined' && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const coords: [number, number] = [pos.coords.longitude, pos.coords.latitude];
+          setGpsCoords(coords);
+          setGpsError(null);
+          fetchDonation(coords);
+        },
+        (err) => {
+          console.warn('[MapScreen] GPS failed:', err.message);
+          let errorMsg = 'Unable to get your current location. Distance cannot be calculated.';
+          if (err.code === err.PERMISSION_DENIED) {
+            errorMsg = 'Location permission was denied. Please enable location access.';
+          }
+          setGpsError(errorMsg);
+          // Fetch donation without GPS — do NOT fall back to hardcoded coordinates
+          fetchDonation();
+        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+      );
+    } else {
+      fetchDonation();
+    }
   }, [searchParams, user]);
 
   const calculateHaversine = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
@@ -105,6 +140,17 @@ function MapContent() {
           <ArrowLeft className="h-4 w-4" /> Back to Dashboard
         </Link>
       </div>
+
+      {/* GPS Error Warning */}
+      {gpsError && (
+        <div className="bg-amber-500/10 border border-amber-500/20 px-4 py-3 rounded-xl flex items-start gap-3 text-xs text-amber-300">
+          <Navigation className="h-4 w-4 shrink-0 mt-0.5 text-amber-400" />
+          <div>
+            <p className="font-bold text-amber-400 mb-0.5">Location Unavailable</p>
+            <p>{gpsError}</p>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
@@ -217,8 +263,8 @@ function MapContent() {
                   <span>{donation.pickupAddress}</span>
                 </div>
                 <div>
-                  <strong className="text-slate-400 block mb-0.5">NGO Hub Destination:</strong>
-                  <span>{user?.address || 'Verified NGO Hub Sector'}</span>
+                  <strong className="text-slate-400 block mb-0.5">NGO Receiver Destination Location:</strong>
+                  <span>{donation.destinationAddress || user?.address || 'Verified NGO Hub Sector'}</span>
                 </div>
                 <div>
                   <strong className="text-slate-400 block mb-0.5">Surplus Details:</strong>

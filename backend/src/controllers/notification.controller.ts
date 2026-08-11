@@ -84,3 +84,51 @@ export const markAllAsRead = async (req: AuthRequest, res: Response, next: NextF
     next(error);
   }
 };
+
+/**
+ * @desc    Delete a single notification
+ * @route   DELETE /api/notifications/:id
+ * @access  Private
+ */
+export const deleteNotification = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const notification = await Notification.findById(req.params.id);
+
+    if (!notification) {
+      return res.status(404).json({ success: false, message: 'Notification not found.' });
+    }
+
+    if (notification.recipient.toString() !== req.user?._id.toString()) {
+      return res.status(403).json({ success: false, message: 'Unauthorized to delete this notification.' });
+    }
+
+    await notification.deleteOne();
+
+    res.status(200).json({
+      success: true,
+      message: 'Notification deleted.',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    Delete all user notifications
+ * @route   DELETE /api/notifications
+ * @access  Private
+ */
+export const deleteAllNotifications = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const query = { recipient: req.user?._id };
+
+    await Notification.deleteMany(query);
+
+    res.status(200).json({
+      success: true,
+      message: 'All notifications deleted.',
+    });
+  } catch (error) {
+    next(error);
+  }
+};

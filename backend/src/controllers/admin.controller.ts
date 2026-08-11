@@ -14,6 +14,7 @@ export const getAnalytics = async (req: AuthRequest, res: Response, next: NextFu
     // 1. User counts
     const totalDonors = await User.countDocuments({ role: 'DONOR' });
     const totalNGOs = await User.countDocuments({ role: 'NGO' });
+    const totalVolunteers = await User.countDocuments({ role: 'VOLUNTEER' });
     const pendingNGOs = await User.countDocuments({ role: 'NGO', ngoVerificationStatus: 'PENDING' });
 
     // 2. Donation metrics
@@ -36,8 +37,9 @@ export const getAnalytics = async (req: AuthRequest, res: Response, next: NextFu
     const recentDonations = await Donation.find()
       .populate('donor', 'name email')
       .populate('ngo', 'name')
+      .populate('volunteer', 'name')
       .sort({ createdAt: -1 })
-      .limit(5);
+      .limit(10);
 
     res.status(200).json({
       success: true,
@@ -45,6 +47,7 @@ export const getAnalytics = async (req: AuthRequest, res: Response, next: NextFu
         users: {
           donors: totalDonors,
           ngos: totalNGOs,
+          volunteers: totalVolunteers,
           pendingNgos: pendingNGOs,
         },
         donations: {
@@ -169,3 +172,131 @@ export const verifyNGO = async (req: AuthRequest, res: Response, next: NextFunct
     next(error);
   }
 };
+
+/**
+ * @desc    Approve or reject a pending NGO or Volunteer account
+ * @route   PUT /api/admin/users/:id/approve
+ * @access  Private (ADMIN only)
+ */
+export const approveUser = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { action } = req.body; // 'approve' or 'reject'
+    if (!['approve', 'reject'].includes(action)) {
+      return res.status(400).json({ success: false, message: 'Invalid action. Select approve or reject.' });
+    }
+
+    const targetUser = await User.findById(req.params.id);
+    if (!targetUser) {
+      return res.status(404).json({ success: false, message: 'User account not found.' });
+    }
+
+    if (targetUser.role !== 'NGO' && targetUser.role !== 'VOLUNTEER') {
+      return res.status(400).json({ success: false, message: 'Only NGO and Volunteer accounts require administrator approval.' });
+    }
+
+    if (action === 'approve') {
+      targetUser.approvalStatus = 'approved';
+      targetUser.status = 'active';
+      if (targetUser.role === 'NGO') {
+        targetUser.ngoVerificationStatus = 'APPROVED';
+        targetUser.trustScore = 95;
+      } else {
+        targetUser.trustScore = 90;
+      }
+    } else {
+      targetUser.approvalStatus = 'rejected';
+      targetUser.status = 'rejected';
+      if (targetUser.role === 'NGO') {
+        targetUser.ngoVerificationStatus = 'REJECTED';
+        targetUser.trustScore = 40;
+      } else {
+        targetUser.trustScore = 40;
+      }
+    }
+
+    await targetUser.save();
+
+    // Trigger push notification to user on approval
+    if (action === 'approve') {
+      const title = targetUser.role === 'VOLUNTEER' ? 'Account Approved ✅' : 'NGO Account Approved ✅';
+      const message = targetUser.role === 'VOLUNTEER'
+        ? 'Your volunteer account has been approved by the administrator. You can now log in and use FoodBridge AI.'
+        : 'Your NGO account has been approved by the administrator. You can now log in and use FoodBridge AI.';
+
+      await SocketService.sendSystemNotification(targetUser._id.toString(), {
+        title,
+        message,
+        type: 'VERIFICATION_UPDATE',
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `User account has been successfully ${action}d.`,
+      user: targetUser,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    Admin delete any user account
+ * @route   DELETE /api/admin/users/:id
+ * @access  Private (ADMIN only)
+ */
+export const deleteUser = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const targetUser = await User.findById(req.params.id);
+    if (!targetUser) {
+      return res.status(404).json({ success: false, message: 'User account not found.' });
+    }
+
+    if (targetUser.role === 'ADMIN') {
+      const adminCount = await User.countDocuments({ role: 'ADMIN' });
+      if (adminCount <= 1) {
+        return res.status(400).json({
+          success: false,
+          message: 'At least one administrator account must remain.',
+        });
+      }
+    }
+
+    await User.findByIdAndDelete(req.params.id);
+
+    res.status(200).json({
+      success: true,
+      message: `User account "${targetUser.name}" (${targetUser.email}) deleted successfully.`,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    Promote user role to ADMIN
+ * @route   PUT /api/admin/users/:id/make-admin
+ * @access  Private (ADMIN only)
+ */
+export const makeUserAdmin = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const targetUser = await User.findById(req.params.id);
+    if (!targetUser) {
+      return res.status(404).json({ success: false, message: 'User account not found.' });
+    }
+
+    targetUser.role = 'ADMIN';
+    targetUser.status = 'active';
+    targetUser.approvalStatus = 'approved';
+    await targetUser.save();
+
+    res.status(200).json({
+      success: true,
+      message: `User "${targetUser.name}" is now an Administrator.`,
+      user: targetUser,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+

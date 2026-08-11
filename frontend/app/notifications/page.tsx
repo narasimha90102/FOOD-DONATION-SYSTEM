@@ -82,7 +82,7 @@ export default function NotificationsPage() {
         if (type === 'CHAT') {
           router.push(`/donor/chat`);
         } else if (['NEW_DONATION', 'DONATION_ACCEPTED', 'PICKUP_STARTED', 'DELIVERY_COMPLETED'].includes(type || '')) {
-          router.push(user.role === 'DONOR' ? '/donor' : user.role === 'NGO' ? '/ngo' : '/admin');
+          router.push(user.role === 'DONOR' ? '/donor' : user.role === 'NGO' ? '/ngo' : user.role === 'VOLUNTEER' ? '/volunteer' : '/admin');
         }
       }
     } catch (err) {
@@ -152,7 +152,7 @@ export default function NotificationsPage() {
         
         {/* Back navigation */}
         <Link
-          href={user.role === 'DONOR' ? '/donor' : user.role === 'NGO' ? '/ngo' : '/admin'}
+          href={user.role === 'DONOR' ? '/donor' : user.role === 'NGO' ? '/ngo' : user.role === 'VOLUNTEER' ? '/volunteer' : '/admin'}
           className="inline-flex items-center gap-2 text-brand-500 hover:text-brand-600 transition-all mb-6 font-bold text-sm"
         >
           <ArrowLeft className="h-4 w-4" /> Back to Dashboard

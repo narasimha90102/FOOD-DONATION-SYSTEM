@@ -17,16 +17,45 @@ export const predictFreshness = async (req: Request, res: Response, next: NextFu
       });
     }
 
-    const prediction = AIService.predictExpiry({
-      foodCategory,
-      preparationTime: new Date(preparationTime),
-      estimatedExpiryTime: new Date(estimatedExpiryTime),
-      storageCondition: storageCondition || 'ambient',
-    });
+    try {
+      const prediction = await AIService.predictExpiry({
+        foodCategory,
+        preparationTime: new Date(preparationTime),
+        estimatedExpiryTime: new Date(estimatedExpiryTime),
+        storageCondition: storageCondition || 'ambient',
+      });
 
+      res.status(200).json({
+        success: true,
+        prediction,
+      });
+    } catch (aiErr: any) {
+      if (aiErr.message && aiErr.message.includes('unavailable')) {
+        return res.status(503).json({
+          success: false,
+          message: aiErr.message,
+        });
+      }
+      throw aiErr;
+    }
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    Check local Ollama AI status
+ * @route   GET /api/ai/status
+ * @access  Private
+ */
+export const checkAIStatus = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const isConnected = await AIService.checkHealth();
     res.status(200).json({
       success: true,
-      prediction,
+      provider: 'Ollama',
+      model: 'qwen3:1.7b',
+      status: isConnected ? 'Connected' : 'Disconnected',
     });
   } catch (error) {
     next(error);

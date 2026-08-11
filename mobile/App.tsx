@@ -8,6 +8,7 @@ import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
 import DonorDashboard from './src/screens/DonorDashboard';
 import NgoDashboard from './src/screens/NgoDashboard';
+import VolunteerDashboard from './src/screens/VolunteerDashboard';
 import ChatScreen from './src/screens/ChatScreen';
 import MapScreen from './src/screens/MapScreen';
 
@@ -25,6 +26,8 @@ export default function App() {
         return <DonorDashboard />;
       case 'NGO_DASHBOARD':
         return <NgoDashboard />;
+      case 'VOLUNTEER_DASHBOARD':
+        return <VolunteerDashboard />;
       case 'CHAT':
         return <ChatScreen />;
       case 'MAP':

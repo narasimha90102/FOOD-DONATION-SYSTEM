@@ -40,6 +40,18 @@ const NotificationSchema = new Schema<INotification>(
     relatedId: {
       type: Schema.Types.ObjectId, // Could point to Donation or Chat ID depending on type
     },
+    recipientRole: {
+      type: String,
+      default: '',
+    },
+    relatedType: {
+      type: String,
+      default: '',
+    },
+    navigationRoute: {
+      type: String,
+      default: '',
+    },
   },
   {
     timestamps: true,

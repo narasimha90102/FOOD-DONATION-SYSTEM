@@ -4,7 +4,7 @@ interface UserProfile {
   _id: string;
   name: string;
   email: string;
-  role: 'DONOR' | 'NGO' | 'ADMIN';
+  role: 'DONOR' | 'NGO' | 'ADMIN' | 'VOLUNTEER';
   profilePicture?: string;
   isVerified: boolean;
   impactPoints: number;
@@ -13,6 +13,7 @@ interface UserProfile {
   activeStreak: number;
   trustScore: number;
   ngoVerificationStatus: 'PENDING' | 'APPROVED' | 'REJECTED' | 'NONE';
+  approvalStatus?: 'pending' | 'approved' | 'rejected';
   ngoCapacity?: number;
   ngoAcceptedCategories?: string[];
   address?: string;
@@ -20,6 +21,7 @@ interface UserProfile {
   location?: {
     coordinates: [number, number];
   };
+  volunteerAvailability?: 'AVAILABLE' | 'BUSY' | 'OFFLINE';
 }
 
 interface NotificationItem {
@@ -79,6 +81,8 @@ interface AppState {
   addNotification: (notification: NotificationItem) => void;
   markNotificationRead: (notificationId: string) => void;
   markAllNotificationsRead: () => void;
+  deleteNotification: (notificationId: string) => void;
+  deleteAllNotifications: () => void;
 
   // Chat Operations
   setChats: (chats: ChatRoom[]) => void;
@@ -177,6 +181,13 @@ export const useAppStore = create<AppState>((set) => {
       set((state) => ({
         notifications: state.notifications.map((n) => ({ ...n, read: true })),
       })),
+
+    deleteNotification: (notificationId) =>
+      set((state) => ({
+        notifications: state.notifications.filter((n) => n._id !== notificationId),
+      })),
+
+    deleteAllNotifications: () => set({ notifications: [] }),
 
     setChats: (chats) => set({ chats }),
 

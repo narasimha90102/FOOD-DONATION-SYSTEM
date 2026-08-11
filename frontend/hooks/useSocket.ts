@@ -52,6 +52,11 @@ export const useSocket = () => {
         window.dispatchEvent(new CustomEvent('donation_update'));
       });
 
+      socket.on('volunteer_location_changed', (data: any) => {
+        console.log('[Socket] volunteer_location_changed received:', data);
+        window.dispatchEvent(new CustomEvent(`volunteer_location_${data.donationId}`, { detail: data.coordinates }));
+      });
+
       socketRef.current = socket;
     } catch (e) {
       console.warn('[SocketHook] Socket.io client failed to load, falling back to mock WebSocket simulator for offline compatibility.');
@@ -96,10 +101,17 @@ export const useSocket = () => {
     }
   };
 
+  const emitLocationUpdate = (donationId: string, coordinates: [number, number]) => {
+    if (socketRef.current) {
+      (socketRef.current as any).emit('volunteer_location_update', { donationId, coordinates });
+    }
+  };
+
   return {
     socket: socketRef.current,
     joinChatRoom,
     leaveChatRoom,
     emitTyping,
+    emitLocationUpdate,
   };
 };

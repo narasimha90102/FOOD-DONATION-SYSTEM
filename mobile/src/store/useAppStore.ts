@@ -4,24 +4,34 @@ interface UserProfile {
   _id: string;
   name: string;
   email: string;
-  role: 'DONOR' | 'NGO' | 'ADMIN';
+  role: 'DONOR' | 'NGO' | 'VOLUNTEER' | 'ADMIN';
   isVerified: boolean;
   trustScore: number;
-  ngoVerificationStatus: string;
+  ngoVerificationStatus?: string;
+  approvalStatus?: string;
 }
+
+type Screen = 'LANDING' | 'LOGIN' | 'REGISTER' | 'DONOR_DASHBOARD' | 'NGO_DASHBOARD' | 'VOLUNTEER_DASHBOARD' | 'CHAT' | 'MAP';
 
 interface MobileAppState {
   user: UserProfile | null;
   token: string | null;
-  currentScreen: 'LANDING' | 'LOGIN' | 'REGISTER' | 'DONOR_DASHBOARD' | 'NGO_DASHBOARD' | 'CHAT' | 'MAP';
+  currentScreen: Screen;
   activeChatId: string | null;
   activeDonationId: string | null;
-  
-  // Handlers
+
   login: (token: string, user: UserProfile) => void;
   logout: () => void;
-  navigate: (screen: 'LANDING' | 'LOGIN' | 'REGISTER' | 'DONOR_DASHBOARD' | 'NGO_DASHBOARD' | 'CHAT' | 'MAP', params?: { chatId?: string; donationId?: string }) => void;
+  navigate: (screen: Screen, params?: { chatId?: string; donationId?: string }) => void;
 }
+
+const getHomeScreen = (role: string): Screen => {
+  switch (role) {
+    case 'NGO': return 'NGO_DASHBOARD';
+    case 'VOLUNTEER': return 'VOLUNTEER_DASHBOARD';
+    default: return 'DONOR_DASHBOARD';
+  }
+};
 
 export const useAppStore = create<MobileAppState>((set) => ({
   user: null,
@@ -30,7 +40,7 @@ export const useAppStore = create<MobileAppState>((set) => ({
   activeChatId: null,
   activeDonationId: null,
 
-  login: (token, user) => set({ token, user, currentScreen: user.role === 'NGO' ? 'NGO_DASHBOARD' : 'DONOR_DASHBOARD' }),
+  login: (token, user) => set({ token, user, currentScreen: getHomeScreen(user.role) }),
   logout: () => set({ token: null, user: null, currentScreen: 'LANDING', activeChatId: null, activeDonationId: null }),
   navigate: (screen, params) => set({
     currentScreen: screen,

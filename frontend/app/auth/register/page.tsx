@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAppStore } from '../../../store/useAppStore';
@@ -15,15 +15,44 @@ export default function RegisterPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<'DONOR' | 'NGO'>('DONOR');
+  const [role, setRole] = useState<'DONOR' | 'NGO' | 'VOLUNTEER'>('DONOR');
   
-  // NGO custom properties
+  // NGO & Volunteer custom properties
   const [address, setAddress] = useState('');
-  const [businessReg, setBusinessReg] = useState('');
-  const [lng, setLng] = useState('77.5946'); // Default BGL longitude
-  const [lat, setLat] = useState('12.9716'); // Default BGL latitude
+  const [phoneNumber, setPhoneNumber] = useState('');
+  // GPS coordinates — start null so we don't submit Bangalore as a default
+  const [lng, setLng] = useState<string | null>(null);
+  const [lat, setLat] = useState<string | null>(null);
+  const [gpsStatus, setGpsStatus] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle');
+  const [gpsError, setGpsError] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(false);
+  
+  // Auto-detect location coordinates on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined' && typeof navigator !== 'undefined' && navigator.geolocation) {
+      setGpsStatus('loading');
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setLng(pos.coords.longitude.toString());
+          setLat(pos.coords.latitude.toString());
+          setGpsStatus('ok');
+          setGpsError(null);
+          console.log('[Register] GPS detected:', pos.coords.longitude, pos.coords.latitude);
+        },
+        (err) => {
+          console.warn('[Register] Geolocation failed:', err.message);
+          setGpsStatus('error');
+          if (err.code === err.PERMISSION_DENIED) {
+            setGpsError('Location permission denied. Your location will not be saved.');
+          } else {
+            setGpsError('Unable to detect current location. Your location will not be saved.');
+          }
+        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+      );
+    }
+  }, []);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -45,12 +74,21 @@ export default function RegisterPage() {
         email,
         password,
         role,
-        address: role === 'NGO' ? address : '',
-        businessRegistrationNumber: role === 'NGO' ? businessReg : '',
-        coordinates: [Number(lng), Number(lat)],
+        phoneNumber,
+        address: (role === 'NGO' || role === 'VOLUNTEER') ? address : '',
+        // Only include coordinates if GPS succeeded — never send hardcoded Bangalore
+        ...(lng !== null && lat !== null ? { coordinates: [Number(lng), Number(lat)] } : {}),
       };
 
       const data = await ApiService.post('/auth/register', payload);
+
+      if (data.code === 'ACCOUNT_PENDING_APPROVAL') {
+        setSuccess('Registration successful. Your account is currently waiting for admin approval. You will be able to login after the administrator approves your account.');
+        setTimeout(() => {
+          router.push('/auth/login');
+        }, 5000);
+        return;
+      }
 
       // Log the user in immediately — no OTP step
       login(data.token, data.user);
@@ -59,6 +97,7 @@ export default function RegisterPage() {
       setTimeout(() => {
         if (data.user.role === 'NGO') router.push('/ngo');
         else if (data.user.role === 'ADMIN') router.push('/admin');
+        else if (data.user.role === 'VOLUNTEER') router.push('/volunteer');
         else router.push('/donor');
       }, 1000);
 
@@ -102,7 +141,7 @@ export default function RegisterPage() {
               role === 'DONOR' ? 'bg-brand-500 text-dark-900 shadow-md' : 'text-slate-400 hover:text-white'
             }`}
           >
-            Surplus Donor Profile
+            Donor
           </button>
           <button
             type="button"
@@ -111,7 +150,16 @@ export default function RegisterPage() {
               role === 'NGO' ? 'bg-brand-500 text-dark-900 shadow-md' : 'text-slate-400 hover:text-white'
             }`}
           >
-            NGO / Surplus Receiver
+            NGO
+          </button>
+          <button
+            type="button"
+            onClick={() => setRole('VOLUNTEER')}
+            className={`flex-1 py-2 rounded font-bold text-xs uppercase transition-all ${
+              role === 'VOLUNTEER' ? 'bg-brand-500 text-dark-900 shadow-md' : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            Volunteer
           </button>
         </div>
 
@@ -120,8 +168,8 @@ export default function RegisterPage() {
             <InputWithIcon
               type="text"
               id="register-name"
-              label="Surplus Name / Organization"
-              placeholder="e.g. Spice Grill Cafe"
+              label={role === 'VOLUNTEER' ? 'Name' : 'Surplus Name / Organization'}
+              placeholder={role === 'VOLUNTEER' ? 'e.g. John Doe' : 'e.g. Spice Grill Cafe'}
               value={name}
               onChange={(e) => setName(e.target.value)}
               icon={User}
@@ -178,12 +226,12 @@ export default function RegisterPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <InputWithIcon
                   type="text"
-                  id="register-businessReg"
-                  label="Business Reg No"
-                  placeholder="e.g. NGO-IND-8392"
-                  value={businessReg}
-                  onChange={(e) => setBusinessReg(e.target.value)}
-                  icon={Building}
+                  id="register-phone"
+                  label="Contact Phone"
+                  placeholder="e.g. +91 98765 43210"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  icon={User}
                   required
                   disabled={loading}
                 />
@@ -191,7 +239,7 @@ export default function RegisterPage() {
                 <InputWithIcon
                   type="text"
                   id="register-address"
-                  label="NGO Hub Address"
+                  label="Address"
                   placeholder="e.g. 5th Cross, Tech Hub"
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
@@ -200,30 +248,40 @@ export default function RegisterPage() {
                   disabled={loading}
                 />
               </div>
+            </div>
+          )}
 
-              <div className="grid grid-cols-2 gap-4">
+          {/* Conditional rendering for Volunteer specifics */}
+          {role === 'VOLUNTEER' && (
+            <div className="space-y-4 border-t border-white/5 pt-4 mt-2">
+              <span className="text-brand-500 text-xs font-bold uppercase tracking-wider block">Volunteer Details</span>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <InputWithIcon
-                  type="number"
-                  step="0.000001"
-                  id="register-lng"
-                  label="Hub Longitude"
-                  value={lng}
-                  onChange={(e) => setLng(e.target.value)}
+                  type="text"
+                  id="register-phone-vol"
+                  label="Phone Number"
+                  placeholder="e.g. +91 98765 43210"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  icon={User}
                   required
                   disabled={loading}
                 />
 
                 <InputWithIcon
-                  type="number"
-                  step="0.000001"
-                  id="register-lat"
-                  label="Hub Latitude"
-                  value={lat}
-                  onChange={(e) => setLat(e.target.value)}
+                  type="text"
+                  id="register-address-vol"
+                  label="Residential Address"
+                  placeholder="e.g. 5th Cross Road, Bangalore"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  icon={Compass}
                   required
                   disabled={loading}
                 />
               </div>
+
             </div>
           )}
 

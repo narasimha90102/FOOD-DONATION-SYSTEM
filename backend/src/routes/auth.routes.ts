@@ -8,6 +8,7 @@ import {
   resetPassword,
   getMe,
   updateProfile,
+  deleteAccount,
 } from '../controllers/auth.controller';
 import { protect, authLimiter } from '../middlewares/auth';
 
@@ -24,5 +25,6 @@ router.post('/reset-password', resetPassword);
 // Private profile endpoints
 router.get('/me', protect, getMe);
 router.put('/update', protect, updateProfile);
+router.delete('/delete-account', protect, deleteAccount);
 
 export default router;

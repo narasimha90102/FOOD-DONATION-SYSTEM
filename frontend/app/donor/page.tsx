@@ -6,6 +6,7 @@ import { ApiService } from '../../services/api';
 import { useAppStore } from '../../store/useAppStore';
 import { Heart, Compass, ShieldCheck, Award, Zap, RefreshCw, BarChart2, PlusCircle, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
+import { formatDateOnly } from '../../utils/formatDate';
 
 interface DonationItem {
   _id: string;
@@ -50,6 +51,21 @@ export default function DonorDashboard() {
       console.error('[DonorDashboard] Fetch failed:', err);
     } finally {
       setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const handleCancelDonation = async (donationId: string) => {
+    if (!window.confirm("Are you sure you want to cancel this donation?")) {
+      return;
+    }
+    try {
+      setRefreshing(true);
+      await ApiService.put(`/donations/${donationId}/status`, { status: 'CANCELLED' });
+      await fetchDashboardData();
+    } catch (err: any) {
+      alert(err.message || "Failed to cancel donation.");
+    } finally {
       setRefreshing(false);
     }
   };
@@ -194,7 +210,7 @@ export default function DonorDashboard() {
                       <span className="text-xs bg-white/5 border border-white/5 px-2 py-0.5 rounded text-slate-300">{item.foodCategory}</span>
                     </div>
                     <p className="text-xs text-slate-400">
-                      Quantity: <strong>{item.quantity} {item.unit}</strong> | Uploaded: {new Date(item.createdAt).toLocaleDateString()}
+                      Quantity: <strong>{item.quantity} {item.unit}</strong> | Uploaded: {formatDateOnly(item.createdAt)}
                     </p>
                     
                     <div className="flex items-center gap-4 mt-1">
@@ -217,6 +233,23 @@ export default function DonorDashboard() {
                     }`}>
                       {(statusDisplay[item.status] || { label: item.status }).label}
                     </span>
+
+                    {!['COMPLETED', 'DELIVERED', 'DISTRIBUTED', 'CANCELLED', 'EXPIRED'].includes(item.status) && (
+                      <div className="flex items-center gap-2">
+                        <Link
+                          href={`/donor/donate?id=${item._id}`}
+                          className="bg-white/5 hover:bg-white/10 text-slate-300 px-3 py-1.5 rounded-lg border border-white/10 text-xs font-bold transition-all"
+                        >
+                          Edit
+                        </Link>
+                        <button
+                          onClick={() => handleCancelDonation(item._id)}
+                          className="bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    )}
 
                     {(item.status === 'ACCEPTED' || item.status === 'PICKED_UP') && (
                       <Link href="/donor/chat" className="bg-white/5 hover:bg-white/10 text-slate-300 p-2 rounded-lg transition-colors border border-white/10 flex items-center justify-center">

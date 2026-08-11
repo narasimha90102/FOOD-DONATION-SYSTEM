@@ -28,7 +28,7 @@ const UserSchema = new Schema<IUser>(
     },
     role: {
       type: String,
-      enum: ['DONOR', 'NGO', 'ADMIN'],
+      enum: ['DONOR', 'NGO', 'ADMIN', 'VOLUNTEER'],
       default: 'DONOR',
     },
     profilePicture: {
@@ -132,6 +132,33 @@ const UserSchema = new Schema<IUser>(
     isBlocked: {
       type: Boolean,
       default: false,
+    },
+    // Volunteer Specific Attributes
+    volunteerAvailability: {
+      type: String,
+      enum: ['AVAILABLE', 'BUSY', 'OFFLINE'],
+      default: 'AVAILABLE',
+    },
+    volunteerStatus: {
+      type: String,
+      enum: ['ACTIVE', 'INACTIVE'],
+      default: 'ACTIVE',
+    },
+    approvalStatus: {
+      type: String,
+      enum: ['pending', 'approved', 'rejected'],
+      default: function(this: any) {
+        if (this.role === 'NGO' || this.role === 'VOLUNTEER') return 'pending';
+        return 'approved';
+      },
+    },
+    status: {
+      type: String,
+      enum: ['pending', 'active', 'rejected'],
+      default: function(this: any) {
+        if (this.role === 'NGO' || this.role === 'VOLUNTEER') return 'pending';
+        return 'active';
+      },
     },
   },
   {

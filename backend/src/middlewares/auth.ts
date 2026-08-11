@@ -38,6 +38,14 @@ export const protect = async (req: AuthRequest, res: Response, next: NextFunctio
       return res.status(403).json({ success: false, message: 'Your account has been suspended by administration.' });
     }
 
+    if (user.approvalStatus === 'pending') {
+      return res.status(403).json({ success: false, message: 'Your account is waiting for admin approval. Please try again after your account is approved.' });
+    }
+
+    if (user.approvalStatus === 'rejected') {
+      return res.status(403).json({ success: false, message: 'Your account has not been approved by the administrator.' });
+    }
+
     req.user = user;
     next();
   } catch (error) {

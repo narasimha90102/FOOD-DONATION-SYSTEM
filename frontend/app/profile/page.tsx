@@ -43,6 +43,41 @@ export default function ProfilePage() {
   const [address, setAddress] = useState('');
   const [profilePicture, setProfilePicture] = useState('');
   const [customPicUrl, setCustomPicUrl] = useState('');
+  const [uploadProgress, setUploadProgress] = useState('');
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('error', 'File size exceeds the 5MB limit.');
+      return;
+    }
+
+    // Validate type
+    const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      showToast('error', 'Only JPG, JPEG, PNG, or WEBP images are allowed.');
+      return;
+    }
+
+    setUploadProgress('Processing image...');
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setProfilePicture(reader.result as string);
+      setCustomPicUrl('');
+      setUploadProgress('Image processed successfully!');
+      showToast('success', 'Profile photo selected! Save changes to persist.');
+    };
+    reader.onerror = () => {
+      setUploadProgress('Failed to read file.');
+      showToast('error', 'Failed to process file.');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const [volAvailability, setVolAvailability] = useState<'AVAILABLE' | 'BUSY' | 'OFFLINE'>('AVAILABLE');
 
   // UI States
   const [loading, setLoading] = useState(false);
@@ -61,6 +96,9 @@ export default function ProfilePage() {
       setAddress(user.address || '');
       setProfilePicture(user.profilePicture || '');
       setCustomPicUrl(user.profilePicture || '');
+      if (user.volunteerAvailability) {
+        setVolAvailability(user.volunteerAvailability as any);
+      }
     }
   }, [mounted, user]);
 
@@ -103,26 +141,50 @@ export default function ProfilePage() {
   };
 
   // Submit profile details to API
+  const handleDeleteAccount = async () => {
+    if (!window.confirm("Are you sure you want to PERMANENTLY delete your account? This action cannot be undone.")) {
+      return;
+    }
+    setLoading(true);
+    try {
+      const response = await ApiService.delete('/auth/delete-account');
+      if (response.success) {
+        showToast('success', 'Account deleted successfully.');
+        setTimeout(() => {
+          updateUser({});
+          router.push('/auth/login');
+        }, 1500);
+      } else {
+        showToast('error', response.message || 'Failed to delete account.');
+      }
+    } catch (error: any) {
+      showToast('error', error.message || 'An error occurred during account deletion.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const response = await ApiService.put('/auth/update', {
+      const payload: any = {
         name: name.trim(),
         address: address.trim(),
         phoneNumber: phoneNumber.trim(),
         profilePicture: profilePicture.trim(),
-      });
+      };
+
+      if (user.role === 'VOLUNTEER') {
+        payload.volunteerAvailability = volAvailability;
+      }
+
+      const response = await ApiService.put('/auth/update', payload);
 
       if (response.success) {
         // Update local Zustand store
-        updateUser({
-          name: name.trim(),
-          address: address.trim(),
-          phoneNumber: phoneNumber.trim(),
-          profilePicture: profilePicture.trim(),
-        });
+        updateUser(payload);
         showToast('success', 'Profile updated successfully!');
       } else {
         showToast('error', response.message || 'Failed to update profile details.');
@@ -139,6 +201,7 @@ export default function ProfilePage() {
     ADMIN: 'System Administrator',
     NGO: 'Registered NGO Partner',
     DONOR: 'Food Surplus Donor',
+    VOLUNTEER: 'Registered Volunteer Partner',
   };
 
   return (
@@ -165,7 +228,7 @@ export default function ProfilePage() {
       <div className="max-w-6xl mx-auto">
         {/* Back navigation */}
         <Link
-          href={user.role === 'DONOR' ? '/donor' : user.role === 'NGO' ? '/ngo' : '/admin'}
+          href={user.role === 'DONOR' ? '/donor' : user.role === 'NGO' ? '/ngo' : user.role === 'VOLUNTEER' ? '/volunteer' : '/admin'}
           className="inline-flex items-center gap-2 text-brand-500 hover:text-brand-600 transition-all mb-6 font-bold text-sm"
         >
           <ArrowLeft className="h-4 w-4" /> Back to Dashboard
@@ -279,6 +342,17 @@ export default function ProfilePage() {
                 </div>
               )}
 
+              {user.role === 'VOLUNTEER' && (
+                <div className="space-y-3">
+                  <div className="bg-white/5 p-3 rounded-xl border border-white/5">
+                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block">Availability Status</span>
+                    <span className="text-sm font-semibold text-white block mt-1">
+                      {volAvailability === 'AVAILABLE' ? '🟢 Available' : volAvailability === 'BUSY' ? '🟡 Busy' : '⚫ Offline'}
+                    </span>
+                  </div>
+                </div>
+              )}
+
               {user.role === 'ADMIN' && (
                 <div className="bg-white/5 p-4 rounded-xl border border-white/5 text-center">
                   <p className="text-xs text-slate-300">
@@ -319,7 +393,7 @@ export default function ProfilePage() {
               </div>
 
               {/* Custom Image URL form */}
-              <form onSubmit={handleCustomPicSubmit} className="flex gap-2 flex-col sm:flex-row">
+              <form onSubmit={handleCustomPicSubmit} className="flex gap-2 flex-col sm:flex-row mb-4">
                 <div className="relative flex-grow">
                   <input
                     type="url"
@@ -336,6 +410,29 @@ export default function ProfilePage() {
                   Apply URL
                 </button>
               </form>
+
+              {/* Device file upload option */}
+              <div className="pt-4 border-t border-white/5 space-y-2">
+                <p className="text-xs text-slate-400">Or upload a profile photo from your device:</p>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="file"
+                    accept="image/png, image/jpeg, image/jpg, image/webp"
+                    onChange={handleFileChange}
+                    className="hidden"
+                    id="profile-upload"
+                  />
+                  <label
+                    htmlFor="profile-upload"
+                    className="bg-white/5 border border-white/10 hover:bg-white/10 text-white font-semibold px-4 py-2 rounded-lg text-sm cursor-pointer transition-all inline-block"
+                  >
+                    Select Photo File
+                  </label>
+                  {uploadProgress && (
+                    <span className="text-xs text-slate-400 font-semibold">{uploadProgress}</span>
+                  )}
+                </div>
+              </div>
             </div>
 
             {/* Profile fields form */}
@@ -387,6 +484,24 @@ export default function ProfilePage() {
                 />
               </div>
 
+              {/* Volunteer Availability status selector */}
+              {user.role === 'VOLUNTEER' && (
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <Sparkles className="h-3.5 w-3.5 text-brand-500" /> Availability Status
+                  </label>
+                  <select
+                    value={volAvailability}
+                    onChange={(e) => setVolAvailability(e.target.value as any)}
+                    className="w-full glass-input"
+                  >
+                    <option value="AVAILABLE">🟢 Available (Ready for Pickups)</option>
+                    <option value="BUSY">🟡 Busy (On active run / unavailable)</option>
+                    <option value="OFFLINE">⚫ Offline (Offline mode)</option>
+                  </select>
+                </div>
+              )}
+
               {/* Submit button */}
               <div className="pt-2">
                 <button
@@ -404,6 +519,22 @@ export default function ProfilePage() {
                 </button>
               </div>
             </form>
+
+            {/* Permanent Account Deletion Section */}
+            <div className="glass-panel p-6 border-red-500/20 bg-red-500/5 space-y-3 text-left">
+              <h4 className="text-sm font-bold text-red-400 text-outfit">Danger Zone — Delete Account</h4>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Self-service account deletion is available starting 24 hours after account registration. Permanently erases your credentials.
+              </p>
+              <button
+                type="button"
+                onClick={handleDeleteAccount}
+                disabled={loading}
+                className="bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 font-bold py-2.5 px-4 rounded-xl text-xs transition-all flex items-center gap-2"
+              >
+                <ShieldAlert className="h-4 w-4" /> Delete Account Permanently
+              </button>
+            </div>
 
           </div>
 

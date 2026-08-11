@@ -7,7 +7,7 @@ interface UserProfile {
   _id: string;
   name: string;
   email: string;
-  role: 'DONOR' | 'NGO' | 'ADMIN';
+  role: 'DONOR' | 'NGO' | 'ADMIN' | 'VOLUNTEER';
   profilePicture?: string;
   isVerified: boolean;
   impactPoints: number;
@@ -74,6 +74,7 @@ export default function ProfileDropdown({
     ADMIN: 'bg-amber-500/10 text-amber-400 border border-amber-500/20',
     NGO: 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20',
     DONOR: 'bg-brand-500/10 text-brand-400 border border-brand-500/20',
+    VOLUNTEER: 'bg-teal-500/10 text-teal-400 border border-teal-500/20',
   };
 
   const currentRoleColor = roleColors[user.role] || roleColors.DONOR;

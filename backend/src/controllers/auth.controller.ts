@@ -45,7 +45,7 @@ const sendTokenResponse = (user: IUser, statusCode: number, res: Response) => {
  */
 export const register = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { name, email, password, role, address, coordinates, businessRegistrationNumber } = req.body;
+    const { name, email, password, role, address, coordinates, businessRegistrationNumber, phoneNumber } = req.body;
 
     // Check if user already exists
     const userExists = await User.findOne({ email });
@@ -69,13 +69,24 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
       password,
       role: role || 'DONOR',
       address: address || '',
+      phoneNumber: phoneNumber || '',
       location: locationData,
       businessRegistrationNumber: businessRegistrationNumber || '',
       isVerified: true,
       trustScore: 80,
+      volunteerAvailability: role === 'VOLUNTEER' ? 'AVAILABLE' : undefined,
+      volunteerStatus: role === 'VOLUNTEER' ? 'ACTIVE' : undefined,
     });
 
     // Return token directly — user is immediately active
+    if (role === 'NGO' || role === 'VOLUNTEER') {
+      return res.status(201).json({
+        success: true,
+        code: 'ACCOUNT_PENDING_APPROVAL',
+        message: 'Registration successful. Your account is currently waiting for admin approval. You will be able to login after the administrator approves your account.',
+      });
+    }
+
     sendTokenResponse(user, 201, res);
   } catch (error) {
     next(error);
@@ -150,6 +161,22 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
       return res.status(401).json({ success: false, message: 'Invalid credentials. Password or email is incorrect.' });
     }
 
+    if (user.approvalStatus === 'pending') {
+      return res.status(403).json({
+        success: false,
+        code: 'ACCOUNT_PENDING_APPROVAL',
+        message: 'Your account is waiting for admin approval. Please try again after your account is approved.',
+      });
+    }
+
+    if (user.approvalStatus === 'rejected') {
+      return res.status(403).json({
+        success: false,
+        code: 'ACCOUNT_REJECTED',
+        message: `Your ${user.role.toLowerCase()} account has not been approved by the administrator.`,
+      });
+    }
+
     sendTokenResponse(user, 200, res);
   } catch (error) {
     next(error);
@@ -197,6 +224,22 @@ export const googleLogin = async (req: Request, res: Response, next: NextFunctio
         user.profilePicture = profilePicture;
         await user.save();
       }
+    }
+
+    if (user.approvalStatus === 'pending') {
+      return res.status(403).json({
+        success: false,
+        code: 'ACCOUNT_PENDING_APPROVAL',
+        message: 'Your account is waiting for admin approval. Please try again after your account is approved.',
+      });
+    }
+
+    if (user.approvalStatus === 'rejected') {
+      return res.status(403).json({
+        success: false,
+        code: 'ACCOUNT_REJECTED',
+        message: `Your ${user.role.toLowerCase()} account has not been approved by the administrator.`,
+      });
     }
 
     sendTokenResponse(user, 200, res);
@@ -334,7 +377,7 @@ export const updateProfile = async (req: AuthRequest, res: Response, next: NextF
       return res.status(404).json({ success: false, message: 'User matching credentials not found.' });
     }
 
-    const { name, address, phoneNumber, coordinates, profilePicture, ngoDocumentUrl, ngoCapacity, ngoAcceptedCategories } = req.body;
+    const { name, address, phoneNumber, coordinates, profilePicture, ngoDocumentUrl, ngoCapacity, ngoAcceptedCategories, volunteerAvailability, volunteerStatus } = req.body;
 
     if (name) user.name = name;
     if (address) user.address = address;
@@ -352,6 +395,12 @@ export const updateProfile = async (req: AuthRequest, res: Response, next: NextF
       if (ngoAcceptedCategories && Array.isArray(ngoAcceptedCategories)) {
         user.ngoAcceptedCategories = ngoAcceptedCategories;
       }
+    }
+
+    // Volunteer specific properties update
+    if (user.role === 'VOLUNTEER') {
+      if (volunteerAvailability) user.volunteerAvailability = volunteerAvailability;
+      if (volunteerStatus) user.volunteerStatus = volunteerStatus;
     }
 
     // Location coordinates updates
@@ -373,3 +422,51 @@ export const updateProfile = async (req: AuthRequest, res: Response, next: NextF
     next(error);
   }
 };
+
+/**
+ * @desc    Self delete user account (Available after 24 real hours from creation)
+ * @route   DELETE /api/auth/delete-account
+ * @access  Private
+ */
+export const deleteAccount = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const user = await User.findById(req.user?._id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User account not found.' });
+    }
+
+    // Protect last admin
+    if (user.role === 'ADMIN') {
+      const adminCount = await User.countDocuments({ role: 'ADMIN' });
+      if (adminCount <= 1) {
+        return res.status(400).json({
+          success: false,
+          message: 'At least one administrator account must remain.',
+        });
+      }
+    }
+
+    // 24 real hours check
+    const createdAtTime = new Date((user as any).createdAt).getTime();
+    const nowTime = Date.now();
+    const hoursDifference = (nowTime - createdAtTime) / (1000 * 60 * 60);
+
+    if (hoursDifference < 24) {
+      const hoursRemaining = (24 - hoursDifference).toFixed(1);
+      return res.status(400).json({
+        success: false,
+        message: `Account deletion is available only after 24 hours from account creation. Please try again in ${hoursRemaining} hours.`,
+      });
+    }
+
+    await User.findByIdAndDelete(req.user?._id);
+
+    res.status(200).json({
+      success: true,
+      message: 'Your account has been permanently deleted.',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+

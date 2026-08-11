@@ -189,6 +189,13 @@ export default function Navbar() {
                   </>
                 )}
 
+                {/* Volunteer */}
+                {user.role === 'VOLUNTEER' && (
+                  <>
+                    <Link href="/volunteer"              data-nav-item="/volunteer"              className={navLink('/volunteer')}>Dashboard</Link>
+                  </>
+                )}
+
                 {/* Admin */}
                 {user.role === 'ADMIN' && (
                   <Link href="/admin"
@@ -323,6 +330,12 @@ export default function Navbar() {
               {user.role === 'NGO' && (
                 <>
                   <Link href="/ngo"      className="relative z-10 block px-4 py-2.5 rounded-xl text-sm font-semibold text-brand-500 hover:bg-brand-500/10 transition-colors">Nearby Radar</Link>
+                </>
+              )}
+
+              {user.role === 'VOLUNTEER' && (
+                <>
+                  <Link href="/volunteer"              data-nav-item="/volunteer"              className={mobileNavLink('/volunteer')}>Dashboard</Link>
                 </>
               )}
 

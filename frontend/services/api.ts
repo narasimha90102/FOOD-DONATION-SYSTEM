@@ -1,11 +1,13 @@
 export class ApiError extends Error {
   status: number;
+  code?: string;
   stackTrace?: string;
 
-  constructor(message: string, status: number, stackTrace?: string) {
+  constructor(message: string, status: number, code?: string, stackTrace?: string) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
+    this.code = code;
     this.stackTrace = stackTrace;
   }
 }
@@ -60,7 +62,7 @@ export class ApiService {
             window.location.href = '/auth/login';
           }
         }
-        throw new ApiError(data.message || `Request failed with status ${response.status}`, response.status, data.stack);
+        throw new ApiError(data.message || `Request failed with status ${response.status}`, response.status, data.code, data.stack);
       }
 
       return data;

@@ -4,11 +4,16 @@ import Link from 'next/link';
 import { useAppStore } from '../store/useAppStore';
 import { Heart, Compass, ShieldCheck, Zap, ArrowRight, CheckCircle2, ChevronRight, BarChart2 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function LandingPage() {
   const { isAuthenticated, user } = useAppStore();
   const [activeTab, setActiveTab] = useState<'donor' | 'ngo'>('donor');
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const stats = [
     { label: 'Meals Redirected', value: '738,490+', color: 'text-brand-500' },
@@ -60,8 +65,8 @@ export default function LandingPage() {
         </p>
 
         <div className="flex flex-col sm:flex-row items-center gap-4">
-          {isAuthenticated && user ? (
-            <Link href={user.role === 'DONOR' ? '/donor' : '/ngo'} className="flex items-center gap-2 bg-brand-500 hover:bg-brand-600 text-dark-900 px-8 py-4 rounded-xl font-bold transition-all shadow-xl hover:shadow-brand-500/20 text-lg">
+          {mounted && isAuthenticated && user ? (
+            <Link href={user.role === 'DONOR' ? '/donor' : user.role === 'NGO' ? '/ngo' : user.role === 'VOLUNTEER' ? '/volunteer' : '/admin'} className="flex items-center gap-2 bg-brand-500 hover:bg-brand-600 text-dark-900 px-8 py-4 rounded-xl font-bold transition-all shadow-xl hover:shadow-brand-500/20 text-lg">
               Enter Platform Dashboard <ArrowRight className="h-5 w-5" />
             </Link>
           ) : (

@@ -60,6 +60,21 @@ const DonationSchema = new Schema<IDonation>(
         required: [true, 'Please specify GPS coordinates'],
       },
     },
+    destinationAddress: {
+      type: String,
+      default: '',
+    },
+    destinationLocation: {
+      type: {
+        type: String,
+        enum: ['Point'],
+        default: 'Point',
+      },
+      coordinates: {
+        type: [Number], // [longitude, latitude]
+        default: [80.016108, 13.028344],
+      },
+    },
     foodImages: {
       type: [String],
       default: [],
@@ -68,9 +83,30 @@ const DonationSchema = new Schema<IDonation>(
       type: String,
       trim: true,
     },
+    volunteer: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+    },
     status: {
       type: String,
-      enum: ['PENDING', 'ACCEPTED', 'PICKED_UP', 'DELIVERED', 'COMPLETED'],
+      enum: [
+        'PENDING',
+        'AI_SCREENING',
+        'APPROVED',
+        'NGO_MATCHED',
+        'NGO_ACCEPTED',
+        'VOLUNTEER_ASSIGNED',
+        'GOING_TO_PICKUP',
+        'PICKED_UP',
+        'IN_TRANSIT',
+        'DELIVERED',
+        'DISTRIBUTED',
+        'REDISTRIBUTED_TO_BENEFICIARIES',
+        'COMPLETED',
+        'REJECTED',
+        'CANCELLED',
+        'EXPIRED',
+      ],
       default: 'PENDING',
     },
     statusHistory: [
@@ -93,6 +129,31 @@ const DonationSchema = new Schema<IDonation>(
     },
     aiRecommendation: {
       type: String,
+    },
+    distribution: {
+      distributedQuantity: { type: Number },
+      beneficiariesCount: { type: Number },
+      distributionDate: { type: Date },
+      location: { type: String },
+      remainingQuantity: { type: Number },
+      notes: { type: String },
+    },
+    cancelledBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    cancelledByRole: {
+      type: String,
+      enum: ['DONOR', 'NGO', 'ADMIN', 'VOLUNTEER'],
+    },
+    cancellationReason: {
+      type: String,
+    },
+    cancellationProof: {
+      type: String,
+    },
+    cancelledAt: {
+      type: Date,
     },
   },
   {

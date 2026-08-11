@@ -5,7 +5,6 @@ import { useAppStore } from '../store/useAppStore';
 import { ApiService } from '../services/api';
 import {
   Bell,
-  CheckCheck,
   Heart,
   Truck,
   CheckCircle2,
@@ -14,6 +13,7 @@ import {
   Sparkles,
   MessageSquare,
   ShieldCheck,
+  Trash2,
 } from 'lucide-react';
 
 interface NotificationItem {
@@ -24,6 +24,7 @@ interface NotificationItem {
   type: string;
   read: boolean;
   relatedId?: string;
+  navigationRoute?: string;
   createdAt: string;
 }
 
@@ -33,7 +34,7 @@ interface NotificationDropdownProps {
 }
 
 export default function NotificationDropdown({ isOpen, onClose }: NotificationDropdownProps) {
-  const { notifications, markNotificationRead, markAllNotificationsRead } = useAppStore();
+  const { notifications, markNotificationRead, deleteNotification, deleteAllNotifications, user } = useAppStore();
   const router = useRouter();
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -59,21 +60,31 @@ export default function NotificationDropdown({ isOpen, onClose }: NotificationDr
 
   if (!isOpen) return null;
 
-  const handleMarkRead = async (notificationId: string, relatedId?: string, type?: string) => {
+  const handleMarkRead = async (notif: NotificationItem) => {
     try {
       // Optimistic state update
-      markNotificationRead(notificationId);
+      markNotificationRead(notif._id);
       
       // API request
-      await ApiService.put(`/notifications/${notificationId}/read`, {});
+      await ApiService.put(`/notifications/${notif._id}/read`, {});
 
-      // Custom routing based on notification type if needed
-      if (relatedId) {
-        if (type === 'CHAT') {
-          router.push(`/donor/chat`); // or donor/chat/page or ngo/chat page
-        } else if (type === 'NEW_DONATION' || type === 'DONATION_ACCEPTED' || type === 'PICKUP_STARTED' || type === 'DELIVERY_COMPLETED') {
-          router.push(`/donor`); // Fallback dashboard routing
+      // Custom routing based on notification details
+      if (notif.relatedId) {
+        if (notif.type === 'CHAT') {
+          if (user?.role === 'NGO') {
+            router.push(`/ngo/chat`);
+          } else {
+            router.push(`/donor/chat`);
+          }
+        } else if (
+          ['NEW_DONATION', 'DONATION_ACCEPTED', 'DONATION_CANCELLED', 'PICKUP_STARTED', 'DELIVERY_COMPLETED', 'TRUST_SCORE_UPDATE'].includes(notif.type)
+        ) {
+          router.push(`/donations/${notif.relatedId}`);
+        } else if (notif.type === 'VERIFICATION_UPDATE') {
+          router.push(user?.role === 'NGO' ? `/ngo` : `/donor`);
         }
+      } else if (notif.navigationRoute) {
+        router.push(notif.navigationRoute);
       }
       onClose();
     } catch (err) {
@@ -81,12 +92,24 @@ export default function NotificationDropdown({ isOpen, onClose }: NotificationDr
     }
   };
 
-  const handleMarkAllRead = async () => {
+  const handleDeleteAll = async () => {
+    if (!window.confirm("Are you sure you want to delete all notifications?")) {
+      return;
+    }
     try {
-      markAllNotificationsRead();
-      await ApiService.put('/notifications/mark-all-read', {});
+      deleteAllNotifications();
+      await ApiService.delete('/notifications');
     } catch (err) {
-      console.error('Failed to mark all notifications as read:', err);
+      console.error('Failed to delete all notifications:', err);
+    }
+  };
+
+  const handleDeleteOne = async (id: string) => {
+    try {
+      deleteNotification(id);
+      await ApiService.delete(`/notifications/${id}`);
+    } catch (err) {
+      console.error('Failed to delete notification:', err);
     }
   };
 
@@ -117,6 +140,7 @@ export default function NotificationDropdown({ isOpen, onClose }: NotificationDr
       case 'DELIVERY_COMPLETED':
         return { icon: CheckCircle2, color: 'text-emerald-400 bg-emerald-500/10' };
       case 'EXPIRY_WARNING':
+      case 'DONATION_CANCELLED':
         return { icon: AlertTriangle, color: 'text-red-400 bg-red-500/10' };
       case 'VERIFICATION_UPDATE':
         return { icon: ShieldCheck, color: 'text-amber-400 bg-amber-500/10' };
@@ -149,12 +173,12 @@ export default function NotificationDropdown({ isOpen, onClose }: NotificationDr
             </span>
           )}
         </div>
-        {unreadCount > 0 && (
+        {notifications.length > 0 && (
           <button
-            onClick={handleMarkAllRead}
-            className="text-[10px] font-bold text-brand-500 hover:text-brand-600 flex items-center gap-1 transition-colors"
+            onClick={handleDeleteAll}
+            className="text-[10px] font-bold text-red-400 hover:text-red-500 flex items-center gap-1 transition-colors"
           >
-            <CheckCheck className="h-3.5 w-3.5" /> Mark all read
+            Delete All
           </button>
         )}
       </div>
@@ -169,15 +193,17 @@ export default function NotificationDropdown({ isOpen, onClose }: NotificationDr
             return (
               <div
                 key={notif._id}
-                onClick={() => handleMarkRead(notif._id, notif.relatedId, notif.type)}
-                className={`py-3 flex gap-3.5 cursor-pointer rounded-xl px-2 transition-all duration-200 text-left ${
+                className={`py-3 flex gap-3.5 cursor-pointer rounded-xl px-2 transition-all duration-200 text-left items-center ${
                   notif.read ? 'hover:bg-white/5' : 'bg-brand-500/5 hover:bg-brand-500/10'
                 }`}
               >
-                <div className={`p-2 rounded-xl shrink-0 h-10 w-10 flex items-center justify-center ${config.color}`}>
+                <div
+                  onClick={() => handleMarkRead(notif)}
+                  className={`p-2 rounded-xl shrink-0 h-10 w-10 flex items-center justify-center ${config.color}`}
+                >
                   <IconComponent className="h-5 w-5" />
                 </div>
-                <div className="flex-1 min-w-0">
+                <div onClick={() => handleMarkRead(notif)} className="flex-1 min-w-0">
                   <div className="flex justify-between items-start gap-1">
                     <p className={`text-xs font-bold truncate ${notif.read ? 'text-white' : 'text-brand-400'}`}>
                       {notif.title}
@@ -190,9 +216,23 @@ export default function NotificationDropdown({ isOpen, onClose }: NotificationDr
                     {notif.message}
                   </p>
                 </div>
-                {!notif.read && (
-                  <span className="h-2 w-2 rounded-full bg-brand-500 shrink-0 self-center shadow-[0_0_8px_rgba(16,185,129,0.7)]" />
-                )}
+                
+                <div className="flex flex-col items-center justify-between gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteOne(notif._id);
+                    }}
+                    className="p-1 text-slate-500 hover:text-red-400 rounded-md transition-colors"
+                    title="Delete Notification"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                  {!notif.read && (
+                    <span className="h-2 w-2 rounded-full bg-brand-500 shrink-0 shadow-[0_0_8px_rgba(16,185,129,0.7)]" />
+                  )}
+                </div>
               </div>
             );
           })
