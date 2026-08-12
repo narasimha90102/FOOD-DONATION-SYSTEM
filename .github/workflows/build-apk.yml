@@ -41,6 +41,7 @@ jobs:
 
       - name: Build Android Debug APK (Gradle)
         env:
+          NODE_ENV: production
           _JAVA_OPTIONS: "-Xmx4096m -XX:MaxMetaspaceSize=1024m"
           GRADLE_OPTS: "-Dorg.gradle.jvmargs='-Xmx4096m -XX:MaxMetaspaceSize=1024m'"
         run: |
