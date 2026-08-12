@@ -28,8 +28,15 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Setup CMake
+        uses: lukka/get-cmake@latest
+        with:
+          cmakeVersion: '3.22.1'
+
       - name: Install Mobile Dependencies
-        run: npm install
+        run: |
+          rm -rf node_modules package-lock.json
+          npm install
         working-directory: mobile
 
       - name: Build Android Debug APK (Gradle)
@@ -38,7 +45,7 @@ jobs:
           GRADLE_OPTS: "-Dorg.gradle.jvmargs='-Xmx4096m -XX:MaxMetaspaceSize=1024m'"
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew clean assembleDebug --no-daemon
         working-directory: mobile/android
 
       - name: Upload APK Artifact
