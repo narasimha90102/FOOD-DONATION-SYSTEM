@@ -31,12 +31,12 @@ jobs:
       - name: Setup NDK
         uses: nttld/setup-ndk@v1
         with:
-          ndk-version: r25c
+          ndk-version: r26b
 
       - name: Setup CMake
         uses: lukka/get-cmake@latest
         with:
-          cmakeVersion: '3.22.1'
+          cmakeVersion: '3.27.0'
 
       - name: Install Mobile Dependencies
         run: |
