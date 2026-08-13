@@ -44,21 +44,20 @@ jobs:
         run: npm ci
         working-directory: mobile
 
-      - name: Print Toolchain Diagnostics
+      - name: Print Toolchain Diagnostics & Export NDK Env
         run: |
           node --version
           npm --version
           java -version
           echo "ANDROID_HOME=$ANDROID_HOME"
-          echo "NDK_PATH=$ANDROID_HOME/ndk/25.1.8937393"
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/25.1.8937393" >> $GITHUB_ENV
+          echo "ANDROID_NDK_ROOT=$ANDROID_HOME/ndk/25.1.8937393" >> $GITHUB_ENV
+          echo "ANDROID_NDK=$ANDROID_HOME/ndk/25.1.8937393" >> $GITHUB_ENV
           ls -la "$ANDROID_HOME/ndk/25.1.8937393" || true
 
       - name: Clean & Build Android Debug APK
         env:
           NODE_ENV: production
-          ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/25.1.8937393
-          ANDROID_NDK_ROOT: ${{ env.ANDROID_HOME }}/ndk/25.1.8937393
-          ANDROID_NDK: ${{ env.ANDROID_HOME }}/ndk/25.1.8937393
           ANDROID_GRADLE_PLUGIN_CHECK_SDK_FOLDER_COMPATIBILITY: "false"
           _JAVA_OPTIONS: "-Xmx4096m -XX:MaxMetaspaceSize=1024m"
           GRADLE_OPTS: "-Dorg.gradle.jvmargs='-Xmx4096m -XX:MaxMetaspaceSize=1024m'"
