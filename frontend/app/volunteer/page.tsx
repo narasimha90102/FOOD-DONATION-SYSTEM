@@ -8,7 +8,7 @@ import { useSocket } from '../../hooks/useSocket';
 import { Compass, MapPin, Navigation, RefreshCw, CheckCircle2, Truck, Clock, Award, Star, MessageSquare, ShieldCheck, AlertTriangle, XCircle } from 'lucide-react';
 import ActiveTrackingMap from '../../components/ActiveTrackingMap';
 import Link from 'next/link';
-import { formatDateOnly } from '../../utils/formatDate';
+import { formatDateOnly, formatISTDateTime } from '../../utils/formatDate';
 
 interface DonationItem {
   _id: string;
@@ -17,6 +17,8 @@ interface DonationItem {
   quantity: number;
   unit: string;
   pickupAddress: string;
+  specialInstructions?: string;
+  estimatedExpiryTime?: string;
   status: string;
   createdAt: string;
   distance?: number;
@@ -442,9 +444,16 @@ export default function VolunteerDashboard() {
                       </div>
 
                       {/* AI Expiry Urgency indicator */}
-                      <div className="flex items-center gap-2 bg-white/5 p-2 rounded-lg text-xs">
-                        <ShieldCheck className="h-4 w-4 text-brand-500" />
-                        <span className="text-slate-400">AI stability window safe</span>
+                      <div className="flex items-center justify-between bg-white/5 p-2 rounded-lg text-xs">
+                        <div className="flex items-center gap-2">
+                          <ShieldCheck className="h-4 w-4 text-brand-500" />
+                          <span className="text-slate-400">AI stability window safe</span>
+                        </div>
+                        {item.estimatedExpiryTime && (
+                          <span className="text-amber-400 font-semibold text-[10px]">
+                            Consume By: {formatISTDateTime(item.estimatedExpiryTime)}
+                          </span>
+                        )}
                       </div>
                     </div>
 
@@ -487,6 +496,27 @@ export default function VolunteerDashboard() {
                   {activeTasks.map((item) => (
                     <div key={item._id} className="glass-panel p-8 border-white/5 flex flex-col gap-6">
                       
+                      {/* Job Details */}
+                      <div className="flex flex-col gap-2 border-b border-white/5 pb-4">
+                        <div className="flex flex-wrap items-center justify-between text-xs text-slate-400 gap-2">
+                          <div>
+                            <span>Pickup Center:</span>
+                            <strong className="text-white ml-1">{item.pickupAddress}</strong>
+                          </div>
+                          <div>
+                            <span>NGO Receiver:</span>
+                            <strong className="text-white ml-1">{item.ngo?.name || 'NGO Center'}</strong> ({item.destinationAddress || item.ngo?.address})
+                          </div>
+                        </div>
+
+                        {item.specialInstructions && (
+                          <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 text-xs text-amber-200 mt-1">
+                            <span className="font-bold text-amber-400 block text-[10px] uppercase">🏢 Building / Location Instructions:</span>
+                            <p className="text-slate-300 text-xs mt-0.5 leading-relaxed">{item.specialInstructions}</p>
+                          </div>
+                        )}
+                      </div>
+
                       <div className="flex justify-between items-start border-b border-white/5 pb-4">
                         <div>
                           <span className="text-[10px] uppercase font-bold text-brand-500 tracking-wider">Active Delivery Target</span>

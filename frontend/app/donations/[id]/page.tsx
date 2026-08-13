@@ -8,7 +8,7 @@ import { useSocket } from '../../../hooks/useSocket';
 import { MapPin, Navigation, Compass, Clock, Award, ShieldCheck, Heart, Truck, CheckCircle2, ChevronRight, ArrowLeft, RefreshCw } from 'lucide-react';
 import ActiveTrackingMap from '../../../components/ActiveTrackingMap';
 import Link from 'next/link';
-import { formatDateTime } from '../../../utils/formatDate';
+import { formatDateTime, formatISTDateTime } from '../../../utils/formatDate';
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -285,9 +285,9 @@ export default function DonationDetailsPage({ params }: Props) {
               )}
 
               {donation.specialInstructions && (
-                <div className="bg-white/5 border border-white/5 rounded-xl p-4 text-xs leading-relaxed text-slate-400">
-                  <strong>Special Instructions:</strong> <br />
-                  <span className="block mt-1">{donation.specialInstructions}</span>
+                <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 text-xs leading-relaxed text-amber-200">
+                  <strong className="text-amber-400 font-bold uppercase tracking-wider text-[10px] block mb-1">🏢 Building / Location Pickup Instructions</strong>
+                  <span className="block mt-0.5 text-slate-200 text-sm font-medium">{donation.specialInstructions}</span>
                 </div>
               )}
             </div>
@@ -307,7 +307,7 @@ export default function DonationDetailsPage({ params }: Props) {
                 <div>
                   <span className="text-slate-500 block uppercase font-bold">Cancellation Date</span>
                   <strong className="text-white text-sm block mt-0.5">
-                    {donation.cancelledAt ? new Date(donation.cancelledAt).toLocaleString() : 'N/A'}
+                    {donation.cancelledAt ? formatISTDateTime(donation.cancelledAt) : 'N/A'}
                   </strong>
                 </div>
               </div>

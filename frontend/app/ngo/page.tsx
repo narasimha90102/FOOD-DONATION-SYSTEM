@@ -6,6 +6,7 @@ import { useAppStore } from '../../store/useAppStore';
 import { Compass, MapPin, MessageSquare, RefreshCw, CheckSquare, Star, Map, Navigation, AlertTriangle, Landmark, XCircle } from 'lucide-react';
 import NextLink from 'next/link';
 import LocationPicker from '../../components/LocationPicker';
+import { formatISTDateTime } from '../../utils/formatDate';
 
 interface NearbyDonation {
   _id: string;
@@ -14,6 +15,8 @@ interface NearbyDonation {
   quantity: number;
   unit: string;
   pickupAddress: string;
+  specialInstructions?: string;
+  estimatedExpiryTime?: string;
   distance: number;
   aiFreshnessScore: number;
   aiSafeWindowHours: number;
@@ -33,6 +36,8 @@ interface PipelineDonation {
   unit: string;
   status: string;
   pickupAddress: string;
+  specialInstructions?: string;
+  estimatedExpiryTime?: string;
   donor: {
     name: string;
     email: string;
@@ -81,7 +86,7 @@ export default function NgoDashboard() {
 
       setNearby(nearbyRes.donations || []);
       setLocationKnown(nearbyRes.locationKnown !== false);
-      setPipeline((pipelineRes.donations || []).filter((d: any) => d.status !== 'COMPLETED'));
+      setPipeline((pipelineRes.donations || []).filter((d: any) => !['COMPLETED', 'CANCELLED', 'EXPIRED'].includes(d.status)));
     } catch (err) {
       console.error('[NgoDashboard] Fetch error:', err);
     } finally {
@@ -438,9 +443,9 @@ export default function NgoDashboard() {
                         <span className="text-slate-200 font-semibold mt-0.5">{item.quantity} {item.unit}</span>
                       </div>
                       <div className="flex flex-col text-right">
-                        <span className="text-[9px] uppercase font-bold text-slate-400">AI Expiry Time</span>
+                        <span className="text-[9px] uppercase font-bold text-slate-400">Consume By / Expiry</span>
                         <span className={`font-semibold mt-0.5 ${item.aiRiskLevel === 'danger' ? 'text-red-400' : 'text-slate-200'}`}>
-                          {item.aiSafeWindowHours} Hours Left
+                          {item.estimatedExpiryTime ? formatISTDateTime(item.estimatedExpiryTime) : `${item.aiSafeWindowHours} Hours Left`}
                         </span>
                       </div>
                     </div>
@@ -455,6 +460,13 @@ export default function NgoDashboard() {
                         <span className="text-[8px] text-slate-500 uppercase mt-0.5">Trust score: {item.donor?.trustScore || 85}</span>
                       </div>
                     </div>
+
+                    {item.specialInstructions && (
+                      <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-2.5 text-xs text-amber-200">
+                        <span className="font-bold text-amber-400 block text-[10px] uppercase">🏢 Building / Location Instructions:</span>
+                        <p className="text-slate-300 text-xs mt-0.5 leading-relaxed">{item.specialInstructions}</p>
+                      </div>
+                    )}
                   </div>
 
                   <button
@@ -497,6 +509,12 @@ export default function NgoDashboard() {
                     <span className="text-[10px] text-brand-500 font-semibold bg-brand-500/5 border border-brand-500/20 px-2 py-0.5 rounded w-fit mt-1 uppercase">
                       Status: {item.status}
                     </span>
+                    {item.specialInstructions && (
+                      <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-2.5 text-xs text-amber-200 mt-2">
+                        <span className="font-bold text-amber-400 block text-[10px] uppercase">🏢 Building / Location Instructions:</span>
+                        <p className="text-slate-300 text-xs mt-0.5 leading-relaxed">{item.specialInstructions}</p>
+                      </div>
+                    )}
                   </div>
 
                   {/* Operational status transition actions */}
@@ -520,10 +538,6 @@ export default function NgoDashboard() {
                     </div>
 
                     <div className="flex gap-1.5">
-                      <NextLink href="/ngo/chat" className="bg-white/5 hover:bg-white/10 border border-white/10 p-2 rounded text-xs text-slate-300 flex items-center justify-center">
-                        <MessageSquare className="h-3.5 w-3.5" />
-                      </NextLink>
-
                       <NextLink href={`/donations/${item._id}`} className="bg-brand-500/10 hover:bg-brand-500/25 border border-brand-500/20 p-2 rounded text-xs text-brand-500 flex items-center justify-center gap-1 font-bold">
                         Track Details
                       </NextLink>

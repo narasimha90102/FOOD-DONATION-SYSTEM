@@ -54,7 +54,12 @@ jobs:
           GRADLE_OPTS: "-Dorg.gradle.jvmargs='-Xmx4096m -XX:MaxMetaspaceSize=1024m'"
         run: |
           chmod +x gradlew
-          ./gradlew clean assembleDebug --no-daemon
+          for i in 1 2 3; do
+            ./gradlew clean assembleDebug --no-daemon --stacktrace && break
+            if [ "$i" = "3" ]; then exit 1; fi
+            echo "Gradle build attempt $i failed. Retrying in 10s..."
+            sleep 10
+          done
         working-directory: mobile/android
 
       - name: Upload APK Artifact

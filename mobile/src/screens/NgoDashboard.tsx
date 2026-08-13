@@ -37,7 +37,7 @@ export default function NgoDashboard() {
       const nearbyRes = await MobileApiService.get('/donations/nearby?radius=15');
       const pipelineRes = await MobileApiService.get('/donations');
       setNearby(nearbyRes.donations || []);
-      setPipeline((pipelineRes.donations || []).filter((d: any) => d.status !== 'COMPLETED'));
+      setPipeline((pipelineRes.donations || []).filter((d: any) => !['COMPLETED', 'CANCELLED', 'EXPIRED'].includes(d.status)));
     } catch (e) {
       console.warn('[NgoMobileTelemetry] Load failed:', e);
     } finally {
@@ -141,6 +141,11 @@ export default function NgoDashboard() {
                   <Text style={styles.listItemName}>{item.foodName}</Text>
                   <Text style={styles.listItemDonor}>Donor: {item.donor.name}</Text>
                   <Text style={styles.listItemDistance}>{item.distance} km away</Text>
+                  {item.specialInstructions ? (
+                    <Text style={[styles.listItemDonor, { color: '#f59e0b', marginTop: 2 }]}>
+                      🏢 {item.specialInstructions}
+                    </Text>
+                  ) : null}
                 </View>
                 <TouchableOpacity onPress={() => openClaimModal(item._id)} style={styles.btnClaim}>
                   <Text style={styles.btnClaimText}>Claim</Text>
@@ -172,6 +177,11 @@ export default function NgoDashboard() {
                   <View style={{ flex: 1 }}>
                     <Text style={styles.listItemName}>{item.foodName}</Text>
                     <Text style={styles.listItemDonor}>Status: {item.status}</Text>
+                    {item.specialInstructions ? (
+                      <Text style={[styles.listItemDonor, { color: '#f59e0b', marginTop: 2 }]}>
+                        🏢 {item.specialInstructions}
+                      </Text>
+                    ) : null}
                     {item.destinationAddress ? (
                       <Text style={[styles.listItemDonor, { color: '#3b82f6', marginTop: 2 }]}>
                         📍 {item.destinationAddress.split(',')[0]}

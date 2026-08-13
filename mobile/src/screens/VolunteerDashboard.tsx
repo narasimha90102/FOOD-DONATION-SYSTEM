@@ -176,6 +176,16 @@ export default function VolunteerDashboard() {
               </View>
             )}
 
+            {/* Special Instructions */}
+            {item.specialInstructions ? (
+              <View style={styles.addrRow}>
+                <MapPin size={11} color="#f59e0b" />
+                <Text style={[styles.addrText, { color: '#fcd34d' }]}>
+                  🏢 {item.specialInstructions}
+                </Text>
+              </View>
+            ) : null}
+
             {/* Google Maps Nav buttons */}
             <View style={styles.navRow}>
               <TouchableOpacity
@@ -256,6 +266,14 @@ export default function VolunteerDashboard() {
               <MapPin size={11} color="#64748b" />
               <Text style={styles.addrText}>{item.pickupAddress}</Text>
             </View>
+            {item.specialInstructions ? (
+              <View style={styles.addrRow}>
+                <MapPin size={11} color="#f59e0b" />
+                <Text style={[styles.addrText, { color: '#fcd34d' }]}>
+                  🏢 {item.specialInstructions}
+                </Text>
+              </View>
+            ) : null}
             <TouchableOpacity
               onPress={() => claimPickup(item._id)}
               disabled={actionLoading === item._id}

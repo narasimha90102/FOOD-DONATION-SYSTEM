@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAppStore } from '../store/useAppStore';
-import { LogOut, Bell, Heart, Menu, X, Landmark, Compass, Award } from 'lucide-react';
+import { LogOut, Bell, Heart, Menu, X, Landmark, Compass, Award, History } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import UserAvatar from './UserAvatar';
 import ProfileDropdown from './ProfileDropdown';
@@ -186,6 +186,9 @@ export default function Navbar() {
                       className="relative z-10 text-sm font-semibold px-4 py-2 rounded-full border border-brand-500 text-brand-500 hover:bg-brand-500/10 transition-all flex items-center gap-1.5">
                       <Compass className="h-4 w-4" /> Nearby Radar
                     </Link>
+                    <Link href="/ngo/history" data-nav-item="/ngo/history" className={navLink('/ngo/history', 'flex items-center gap-1')}>
+                      <History className="h-3.5 w-3.5" /> History
+                    </Link>
                   </>
                 )}
 
@@ -330,6 +333,7 @@ export default function Navbar() {
               {user.role === 'NGO' && (
                 <>
                   <Link href="/ngo"      className="relative z-10 block px-4 py-2.5 rounded-xl text-sm font-semibold text-brand-500 hover:bg-brand-500/10 transition-colors">Nearby Radar</Link>
+                  <Link href="/ngo/history" data-nav-item="/ngo/history" className={mobileNavLink('/ngo/history')}>History</Link>
                 </>
               )}
 

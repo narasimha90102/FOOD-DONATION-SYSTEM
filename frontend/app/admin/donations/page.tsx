@@ -6,7 +6,7 @@ import { ApiService } from '../../../services/api';
 import { useAppStore } from '../../../store/useAppStore';
 import { Landmark, RefreshCw, ArrowLeft, Search, Filter, Compass, AlertCircle, FileText, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
-import { formatDateOnly } from '../../../utils/formatDate';
+import { formatDateOnly, formatISTDateTime } from '../../../utils/formatDate';
 
 interface DonationItem {
   _id: string;
@@ -16,6 +16,7 @@ interface DonationItem {
   unit: string;
   status: string;
   createdAt: string;
+  estimatedExpiryTime?: string;
   donor?: {
     name: string;
     email: string;
@@ -205,7 +206,7 @@ export default function AdminDonationsPanel() {
                 <th className="py-3 px-4">Surplus Item</th>
                 <th className="py-3 px-4">Donor Profile</th>
                 <th className="py-3 px-4">Assigned NGO</th>
-                <th className="py-3 px-4">Assigned Driver</th>
+                <th className="py-3 px-4">Consume By (IST)</th>
                 <th className="py-3 px-4">Date Uploaded</th>
                 <th className="py-3 px-4">Status</th>
                 <th className="py-3 px-4 text-right">Actions</th>
@@ -224,7 +225,9 @@ export default function AdminDonationsPanel() {
                     <span className="text-[10px] text-slate-500">{item.donor?.email}</span>
                   </td>
                   <td className="py-4 px-4 text-slate-200">{item.ngo?.name || '—'}</td>
-                  <td className="py-4 px-4 text-slate-200">{item.volunteer?.name || '—'}</td>
+                  <td className="py-4 px-4 text-amber-400 font-medium text-[11px]">
+                    {item.estimatedExpiryTime ? formatISTDateTime(item.estimatedExpiryTime) : 'N/A'}
+                  </td>
                   <td className="py-4 px-4">{formatDateOnly(item.createdAt)}</td>
                   <td className="py-4 px-4">
                     <span className={`px-2 py-0.5 rounded font-bold text-[9px] uppercase border ${

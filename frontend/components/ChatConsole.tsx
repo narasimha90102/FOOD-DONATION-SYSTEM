@@ -147,6 +147,18 @@ export default function ChatConsole() {
 
   const activeChat = chats.find(c => c._id === activeChatId);
 
+  if (user?.role === 'NGO') {
+    return (
+      <div className="w-full max-w-7xl mx-auto px-4 py-16 text-center">
+        <div className="glass-panel p-12 max-w-md mx-auto flex flex-col items-center gap-3 border-white/10">
+          <MessageSquare className="h-10 w-10 text-slate-500" />
+          <h3 className="text-lg font-bold text-white">Chat Option Disabled</h3>
+          <p className="text-xs text-slate-400">Direct chat option has been disabled for NGO accounts. Please use the Surplus Pickup Pipeline to view pickup and tracking details.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-grow flex flex-col lg:flex-row gap-6 h-[600px] overflow-hidden">
       
@@ -230,7 +242,7 @@ export default function ChatConsole() {
                     </div>
 
                     <div className="flex items-center gap-1.5 mt-1 text-[8px] text-slate-500 font-bold uppercase tracking-wider">
-                      <span>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      <span>{new Date(msg.createdAt).toLocaleTimeString('en-US', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true })}</span>
                       {isMine && (
                         <CheckCheck className={`h-3 w-3 ${msg.seen ? 'text-brand-500' : 'text-slate-500'}`} />
                       )}

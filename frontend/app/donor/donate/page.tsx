@@ -410,10 +410,11 @@ export default function DonatePage() {
           </div>
 
           <div>
-            <label className="text-xs font-bold text-slate-400 block mb-1">Special Instructions</label>
+            <label className="text-xs font-bold text-slate-400 block mb-1">Building / Location Pickup Instructions</label>
+            <span className="text-[11px] text-slate-500 block mb-1.5">Provide specific building entrance, gate entry, landmark, or location instructions for pickup.</span>
             <textarea
               rows={3}
-              placeholder="e.g. Keep separate, bring boxes for pickup..."
+              placeholder="e.g. Building A, 2nd floor, entry via back gate near landmark..."
               value={instructions}
               onChange={(e) => setInstructions(e.target.value)}
               className="w-full glass-input resize-none"

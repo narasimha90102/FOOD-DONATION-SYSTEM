@@ -6,7 +6,7 @@ import { ApiService } from '../../services/api';
 import { useAppStore } from '../../store/useAppStore';
 import { Heart, Compass, ShieldCheck, Award, Zap, RefreshCw, BarChart2, PlusCircle, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
-import { formatDateOnly } from '../../utils/formatDate';
+import { formatDateOnly, formatISTDateTime } from '../../utils/formatDate';
 
 interface DonationItem {
   _id: string;
@@ -16,6 +16,7 @@ interface DonationItem {
   unit: string;
   status: string;
   createdAt: string;
+  estimatedExpiryTime?: string;
   aiFreshnessScore: number;
   aiRiskLevel: string;
 }
@@ -211,6 +212,9 @@ export default function DonorDashboard() {
                     </div>
                     <p className="text-xs text-slate-400">
                       Quantity: <strong>{item.quantity} {item.unit}</strong> | Uploaded: {formatDateOnly(item.createdAt)}
+                      {item.estimatedExpiryTime && (
+                        <> | <span className="text-amber-400 font-medium">Consume By: {formatISTDateTime(item.estimatedExpiryTime)}</span></>
+                      )}
                     </p>
                     
                     <div className="flex items-center gap-4 mt-1">

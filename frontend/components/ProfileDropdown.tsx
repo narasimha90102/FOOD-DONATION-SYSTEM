@@ -2,6 +2,7 @@ import React, { useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { User, Mail, Phone, Calendar, Shield, Settings, LogOut, Award } from 'lucide-react';
 import UserAvatar from './UserAvatar';
+import { formatDateOnly } from '../utils/formatDate';
 
 interface UserProfile {
   _id: string;
@@ -62,11 +63,7 @@ export default function ProfileDropdown({
 
   // Format creation date
   const joinedDate = user.createdAt
-    ? new Date(user.createdAt).toLocaleDateString(undefined, {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-      })
+    ? formatDateOnly(user.createdAt)
     : 'June 2026';
 
   // Role badges colors

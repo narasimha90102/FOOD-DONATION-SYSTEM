@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAppStore } from '../../store/useAppStore';
 import { ApiService } from '../../services/api';
+import { formatISTDateTime } from '../../utils/formatDate';
 import {
   ArrowLeft,
   Bell,
@@ -114,13 +115,7 @@ export default function NotificationsPage() {
   };
 
   const formatPreciseDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString(undefined, {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    return formatISTDateTime(dateString);
   };
 
   const getNotificationConfig = (type: string) => {

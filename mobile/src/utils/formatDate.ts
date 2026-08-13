@@ -33,35 +33,3 @@ export function formatISTDateTime(dateInput: string | Date | undefined | null): 
 
   return `${day} ${month} ${year}, ${hour}:${minute} ${dayPeriod} (IST)`;
 }
-
-/**
- * Standard alias for formatISTDateTime
- */
-export function formatDateTime(dateInput: string | Date | undefined | null): string {
-  return formatISTDateTime(dateInput);
-}
-
-/**
- * Formats a Date object or ISO string into DD Month YYYY format in Asia/Kolkata timezone.
- * Example: 23 August 2026
- */
-export function formatDateOnly(dateInput: string | Date | undefined | null): string {
-  if (!dateInput) return 'Not specified';
-  const date = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
-  if (isNaN(date.getTime())) return 'Not specified';
-
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'Asia/Kolkata',
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric',
-  });
-
-  const parts = formatter.formatToParts(date);
-  const partMap: Record<string, string> = {};
-  parts.forEach((p) => {
-    partMap[p.type] = p.value;
-  });
-
-  return `${partMap.day} ${partMap.month} ${partMap.year}`;
-}
