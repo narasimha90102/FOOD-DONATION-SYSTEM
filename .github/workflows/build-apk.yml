@@ -29,18 +29,12 @@ jobs:
       - name: Setup Android SDK & Native Tools
         uses: android-actions/setup-android@v3
         with:
-          packages: 'platform-tools platforms;android-34 build-tools;34.0.0 ndk;25.1.8937393'
-
-      - name: Setup NDK
-        id: setup-ndk
-        uses: nttld/setup-ndk@v1
-        with:
-          ndk-version: r26b
+          packages: 'platform-tools platforms;android-34 build-tools;34.0.0 ndk;25.1.8937393 cmake;3.22.1'
 
       - name: Setup CMake
         uses: lukka/get-cmake@latest
         with:
-          cmakeVersion: '3.28.0'
+          cmakeVersion: '3.22.1'
 
       - name: Accept Android SDK Licenses
         run: |
@@ -56,16 +50,17 @@ jobs:
           npm --version
           java -version
           echo "ANDROID_HOME=$ANDROID_HOME"
-          echo "NDK PATH=${{ steps.setup-ndk.outputs.ndk-path }}"
+          echo "NDK_PATH=$ANDROID_HOME/ndk/25.1.8937393"
+          ls -la "$ANDROID_HOME/ndk/25.1.8937393" || true
+          ls -la "$ANDROID_HOME/cmake/3.22.1/bin" || true
 
       - name: Clean & Build Android Debug APK
         env:
           NODE_ENV: production
-          ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
-          ANDROID_NDK_ROOT: ${{ steps.setup-ndk.outputs.ndk-path }}
+          ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/25.1.8937393
+          ANDROID_NDK_ROOT: ${{ env.ANDROID_HOME }}/ndk/25.1.8937393
           _JAVA_OPTIONS: "-Xmx4096m -XX:MaxMetaspaceSize=1024m"
           GRADLE_OPTS: "-Dorg.gradle.jvmargs='-Xmx4096m -XX:MaxMetaspaceSize=1024m'"
-          CMAKE_VERSION: "3.28.0"
         run: |
           chmod +x gradlew
           ./gradlew clean --no-daemon
