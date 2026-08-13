@@ -28,7 +28,7 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
         with:
-          packages: 'ndk;26.1.10909125 cmake;3.28.0'
+          packages: 'ndk;26.1.10909125'
 
       - name: Setup NDK
         id: setup-ndk
