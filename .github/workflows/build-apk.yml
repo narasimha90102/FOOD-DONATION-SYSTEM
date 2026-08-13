@@ -28,18 +28,18 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
         with:
-          packages: 'platform-tools platforms;android-34 build-tools;34.0.0 ndk;25.1.8937393'
+          packages: 'platform-tools platforms;android-34 build-tools;34.0.0 ndk;26.1.10909125'
 
       - name: Setup NDK
         id: setup-ndk
         uses: nttld/setup-ndk@v1
         with:
-          ndk-version: r25c
+          ndk-version: r26b
 
       - name: Setup CMake
         uses: lukka/get-cmake@latest
         with:
-          cmakeVersion: '3.22.1'
+          cmakeVersion: '3.28.0'
 
       - name: Install Mobile Dependencies
         run: |
