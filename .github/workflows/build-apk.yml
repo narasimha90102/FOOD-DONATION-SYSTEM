@@ -39,7 +39,7 @@ jobs:
       - name: Setup CMake
         uses: lukka/get-cmake@latest
         with:
-          cmakeVersion: '3.28.0'
+          cmakeVersion: '3.22.1'
 
       - name: Install Mobile Dependencies
         run: |
