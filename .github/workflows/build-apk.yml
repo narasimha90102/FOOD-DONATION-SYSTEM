@@ -27,24 +27,21 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
-        with:
-          packages: 'ndk;26.1.10909125'
 
       - name: Setup NDK
         id: setup-ndk
         uses: nttld/setup-ndk@v1
         with:
-          ndk-version: r26b
+          ndk-version: r25c
 
       - name: Setup CMake
         uses: lukka/get-cmake@latest
         with:
-          cmakeVersion: '3.28.0'
+          cmakeVersion: '3.22.1'
 
       - name: Install Mobile Dependencies
         run: |
-          rm -rf node_modules package-lock.json
-          npm install
+          npm ci || npm install
         working-directory: mobile
 
       - name: Build Android Debug APK (Gradle)
@@ -54,15 +51,9 @@ jobs:
           ANDROID_NDK_ROOT: ${{ steps.setup-ndk.outputs.ndk-path }}
           _JAVA_OPTIONS: "-Xmx4096m -XX:MaxMetaspaceSize=1024m"
           GRADLE_OPTS: "-Dorg.gradle.jvmargs='-Xmx4096m -XX:MaxMetaspaceSize=1024m'"
-          ANDROID_GRADLE_PLUGIN_CHECK_SDK_FOLDER_COMPATIBILITY: "false"
         run: |
           chmod +x gradlew
-          for i in 1 2 3; do
-            ./gradlew clean assembleDebug --no-daemon --stacktrace && break
-            if [ "$i" = "3" ]; then exit 1; fi
-            echo "Gradle build attempt $i failed. Retrying in 10s..."
-            sleep 10
-          done
+          ./gradlew clean assembleDebug --no-daemon --stacktrace
         working-directory: mobile/android
 
       - name: Upload APK Artifact
