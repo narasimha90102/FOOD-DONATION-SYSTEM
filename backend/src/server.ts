@@ -18,7 +18,7 @@ const startServer = async () => {
   SocketService.initialize(server);
 
   // 4. Stand server
-  server.listen(PORT, async () => {
+  server.listen(PORT, '0.0.0.0', async () => {
     console.log(`\n======================================================`);
     console.log(`🚀 FoodBridge AI Enterprise Server Started!`);
     console.log(`💻 Environment: \t${env.NODE_ENV.toUpperCase()}`);
