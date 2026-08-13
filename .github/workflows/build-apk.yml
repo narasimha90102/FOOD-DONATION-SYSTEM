@@ -29,7 +29,7 @@ jobs:
       - name: Setup Android SDK & Native Tools
         uses: android-actions/setup-android@v3
         with:
-          packages: 'platform-tools platforms;android-34 build-tools;34.0.0 cmake;3.28.0 ndk;25.1.8937393'
+          packages: 'platform-tools platforms;android-34 build-tools;34.0.0 ndk;25.1.8937393'
 
       - name: Setup NDK
         id: setup-ndk
