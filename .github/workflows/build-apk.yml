@@ -26,15 +26,10 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Android SDK & Native Tools
+      - name: Setup Android SDK & Tools
         uses: android-actions/setup-android@v3
         with:
-          packages: 'platform-tools platforms;android-34 build-tools;34.0.0 ndk;25.1.8937393 cmake;3.22.1'
-
-      - name: Setup CMake
-        uses: lukka/get-cmake@latest
-        with:
-          cmakeVersion: '3.22.1'
+          packages: 'platform-tools platforms;android-34 build-tools;34.0.0 ndk;25.1.8937393'
 
       - name: Accept Android SDK Licenses
         run: |
@@ -52,7 +47,6 @@ jobs:
           echo "ANDROID_HOME=$ANDROID_HOME"
           echo "NDK_PATH=$ANDROID_HOME/ndk/25.1.8937393"
           ls -la "$ANDROID_HOME/ndk/25.1.8937393" || true
-          ls -la "$ANDROID_HOME/cmake/3.22.1/bin" || true
 
       - name: Clean & Build Android Debug APK
         env:
