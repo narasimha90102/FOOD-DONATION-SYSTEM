@@ -30,7 +30,7 @@ jobs:
       - name: Setup Android SDK & Native Tools
         uses: android-actions/setup-android@v3
         with:
-          packages: 'platform-tools platforms;android-34 build-tools;34.0.0 ndk;25.2.9519653'
+          packages: 'platform-tools platforms;android-35 build-tools;35.0.0 ndk;26.3.11579264'
 
       - name: Accept Android SDK Licenses
         run: |
@@ -51,12 +51,12 @@ jobs:
           pkill -9 -f "gradle" || true
           sleep 2
 
-      - name: Clean node_modules and reinstall with lockfile
+      - name: Clean node_modules and reinstall
         run: |
           echo "Removing node_modules..."
           rm -rf mobile/node_modules/
-          echo "Installing exact versions from package-lock.json..."
-          npm ci --legacy-peer-deps
+          echo "Installing dependencies..."
+          npm install --legacy-peer-deps
         working-directory: mobile
 
       - name: Verify React Native Gradle Plugin Installed
@@ -81,24 +81,19 @@ jobs:
           npm --version
           java -version
           echo "ANDROID_HOME=$ANDROID_HOME"
-          echo "NDK_HOME=$ANDROID_HOME/ndk/25.2.9519653" >> $GITHUB_ENV
-          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/25.2.9519653" >> $GITHUB_ENV
-          echo "ANDROID_NDK_ROOT=$ANDROID_HOME/ndk/25.2.9519653" >> $GITHUB_ENV
-          echo "ANDROID_NDK=$ANDROID_HOME/ndk/25.2.9519653" >> $GITHUB_ENV
-          ls -la "$ANDROID_HOME/ndk/25.2.9519653" || true
-
-      - name: Verify Prefab Artifacts Available
-        run: |
-          echo "Checking for react-android AAR and Prefab..."
-          find ~/.gradle/caches -name "*react-android*.aar" -o -name "*fbjni*.aar" | head -20 || echo "AAR files not yet cached (will download)"
+          echo "NDK_HOME=$ANDROID_HOME/ndk/26.3.11579264" >> $GITHUB_ENV
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/26.3.11579264" >> $GITHUB_ENV
+          echo "ANDROID_NDK_ROOT=$ANDROID_HOME/ndk/26.3.11579264" >> $GITHUB_ENV
+          echo "ANDROID_NDK=$ANDROID_HOME/ndk/26.3.11579264" >> $GITHUB_ENV
+          ls -la "$ANDROID_HOME/ndk/26.3.11579264" || true
 
       - name: Clean & Build Android Debug APK
         env:
           NODE_ENV: production
           ANDROID_GRADLE_PLUGIN_CHECK_SDK_FOLDER_COMPATIBILITY: "false"
-          _JAVA_OPTIONS: "-Xmx4096m -XX:MaxMetaspaceSize=1024m"
-          GRADLE_OPTS: "-Dorg.gradle.jvmargs='-Xmx4096m -XX:MaxMetaspaceSize=1024m' -Dorg.gradle.cxx.cmake.version=3.22.1 -Dorg.gradle.cxx.ndk.version=25.2.9519653 -Dorg.gradle.workers.max=2"
-          ANDROID_NDK_ROOT: ${{ env.ANDROID_HOME }}/ndk/25.2.9519653
+          _JAVA_OPTIONS: "-Xmx6144m -XX:MaxMetaspaceSize=2048m"
+          GRADLE_OPTS: "-Dorg.gradle.jvmargs='-Xmx6144m -XX:MaxMetaspaceSize=2048m' -Dorg.gradle.cxx.cmake.version=3.28.0 -Dorg.gradle.cxx.ndk.version=26.3.11579264"
+          ANDROID_NDK_ROOT: ${{ env.ANDROID_HOME }}/ndk/26.3.11579264
         run: |
           ./gradlew clean --no-daemon --stacktrace
           ./gradlew assembleDebug --no-daemon --stacktrace --info
@@ -106,7 +101,7 @@ jobs:
 
       - name: Verify APK Artifact Exists
         run: |
-          ls -lah mobile/android/app/build/outputs/apk/debug/app-debug.apk
+          ls -lah mobile/android/app/build/outputs/apk/debug/app-debug.apk || exit 1
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
