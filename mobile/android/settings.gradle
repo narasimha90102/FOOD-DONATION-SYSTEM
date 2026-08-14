@@ -6,4 +6,3 @@ plugins {
 }
 rootProject.name = 'FoodBridge'
 include ':app'
-includeBuild('../node_modules/@react-native/gradle-plugin')

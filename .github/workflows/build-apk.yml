@@ -35,6 +35,19 @@ jobs:
         run: |
           yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
+      - name: Restore npm cache
+        uses: actions/cache@v4
+        with:
+          path: mobile/node_modules
+          key: ${{ runner.os }}-npm-${{ hashFiles('mobile/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-
+
+      - name: Install Watchman
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y watchman || true
+
       - name: Install Mobile Dependencies
         run: npm install --legacy-peer-deps
         working-directory: mobile
