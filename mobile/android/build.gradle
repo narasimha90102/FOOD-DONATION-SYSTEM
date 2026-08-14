@@ -27,3 +27,15 @@ allprojects {
         maven { url 'https://www.jitpack.io' }
     }
 }
+
+subprojects { subproject ->
+    if (subproject.name == 'react-native-screens') {
+        subproject.afterEvaluate {
+            subproject.android {
+                defaultConfig {
+                    minSdkVersion 24
+                }
+            }
+        }
+    }
+}
