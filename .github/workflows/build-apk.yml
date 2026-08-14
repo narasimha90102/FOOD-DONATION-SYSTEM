@@ -37,8 +37,15 @@ jobs:
           yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
       - name: Install Mobile Dependencies
-        run: npm install --legacy-peer-deps
+        run: |
+          npm audit fix --legacy-peer-deps || true
+          npm install --legacy-peer-deps
         working-directory: mobile
+
+      - name: Clear Gradle Cache
+        run: |
+          rm -rf ~/.gradle/caches/
+          rm -rf mobile/android/.gradle/
 
       - name: Verify React Native Gradle Plugin Installed
         run: |

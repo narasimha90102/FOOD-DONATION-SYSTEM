@@ -12,6 +12,7 @@ plugins {
 rootProject.name = 'FoodBridge'
 include ':app'
 
-extensions.configure(com.facebook.react.ReactSettingsExtension) { ex ->
-    ex.autolinkLibrariesFromCommand()
+// Properly configure React settings
+react {
+    autolinkLibrariesFromCommand()
 }
