@@ -16,6 +16,7 @@ interface NearbyDonation {
   unit: string;
   distance: number;
   donor: { name: string };
+  specialInstructions?: string;
 }
 
 export default function NgoDashboard() {

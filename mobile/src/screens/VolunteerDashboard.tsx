@@ -16,6 +16,7 @@ interface DonationItem {
   unit: string;
   status: string;
   pickupAddress: string;
+  specialInstructions?: string;
   location?: { coordinates: [number, number] };
   destinationLocation?: { coordinates: [number, number] };
   destinationAddress?: string;
