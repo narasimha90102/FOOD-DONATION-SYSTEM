@@ -18,6 +18,8 @@ buildscript {
     }
 }
 
+apply plugin: "com.facebook.react.root"
+
 allprojects {
     repositories {
         google()
