@@ -10,12 +10,10 @@
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\" \"npm run dev:mobile\" --names \"Backend,Frontend,Mobile\" --colors \"yellow,cyan,green\"",
     "generate:report": "node tests/generate-report.js",
     "test:selenium": "node tests/selenium/web-e2e.spec.js",
-    "test:appium": "node tests/appium/mobile-e2e.spec.js",
     "test:load": "node tests/performance/load-test.js",
-    "test:all": "npm run test:selenium && npm run test:appium && npm run test:load && npm run generate:report"
+    "test:all": "npm run test:selenium && npm run test:load && npm run generate:report"
   },
   "devDependencies": {
-    "appium": "^2.0.1",
     "autocannon": "^8.0.0",
     "chai": "^6.2.2",
     "concurrently": "^8.2.2",

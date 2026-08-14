@@ -1,4 +1,4 @@
-name: FoodBridge AI - Build Android APK Only
+name: FoodBridge AI - Build Android APK
 
 on:
   push:
@@ -29,14 +29,14 @@ jobs:
       - name: Setup Android SDK & Native Tools
         uses: android-actions/setup-android@v3
         with:
-          packages: 'platform-tools platforms;android-34 build-tools;34.0.0 ndk;26.1.10909125 cmake;3.27.1'
+          packages: 'platform-tools platforms;android-34 build-tools;34.0.0 ndk;26.1.10909125'
 
       - name: Accept Android SDK Licenses
         run: |
           yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
-      - name: Install Mobile Dependencies (npm ci)
-        run: npm ci
+      - name: Install Mobile Dependencies
+        run: npm install --legacy-peer-deps
         working-directory: mobile
 
       - name: Print Toolchain Diagnostics & Export NDK Env
@@ -49,10 +49,7 @@ jobs:
           echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/26.1.10909125" >> $GITHUB_ENV
           echo "ANDROID_NDK_ROOT=$ANDROID_HOME/ndk/26.1.10909125" >> $GITHUB_ENV
           echo "ANDROID_NDK=$ANDROID_HOME/ndk/26.1.10909125" >> $GITHUB_ENV
-          export CMAKE_PATH=$ANDROID_HOME/cmake/3.27.1/bin
-          echo "$CMAKE_PATH" >> $GITHUB_PATH
           ls -la "$ANDROID_HOME/ndk/26.1.10909125" || true
-          cmake --version || true
 
       - name: Clean & Build Android Debug APK
         env:
@@ -73,5 +70,5 @@ jobs:
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: food-donation-debug-apk
+          name: foodbridge-android-debug-apk
           path: mobile/android/app/build/outputs/apk/debug/app-debug.apk
