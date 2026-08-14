@@ -52,6 +52,12 @@ jobs:
         run: npm install --legacy-peer-deps
         working-directory: mobile
 
+      - name: Verify React Native Gradle Plugin Installed
+        run: |
+          test -d node_modules/@react-native/gradle-plugin || (echo "Error: @react-native/gradle-plugin missing" && exit 1)
+          echo "@react-native/gradle-plugin found successfully"
+        working-directory: mobile
+
       - name: Verify & Prepare Gradle Wrapper
         working-directory: mobile/android
         run: |
