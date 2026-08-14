@@ -39,6 +39,16 @@ jobs:
         run: npm install --legacy-peer-deps
         working-directory: mobile
 
+      - name: Verify & Prepare Gradle Wrapper
+        working-directory: mobile/android
+        run: |
+          ls -la
+          test -f gradlew || (echo "Error: gradlew missing" && exit 1)
+          test -f gradlew.bat || (echo "Error: gradlew.bat missing" && exit 1)
+          test -f gradle/wrapper/gradle-wrapper.jar || (echo "Error: gradle-wrapper.jar missing" && exit 1)
+          test -f gradle/wrapper/gradle-wrapper.properties || (echo "Error: gradle-wrapper.properties missing" && exit 1)
+          chmod +x gradlew
+
       - name: Print Toolchain Diagnostics & Export NDK Env
         run: |
           node --version
@@ -58,7 +68,6 @@ jobs:
           _JAVA_OPTIONS: "-Xmx4096m -XX:MaxMetaspaceSize=1024m"
           GRADLE_OPTS: "-Dorg.gradle.jvmargs='-Xmx4096m -XX:MaxMetaspaceSize=1024m'"
         run: |
-          chmod +x gradlew
           ./gradlew clean --no-daemon
           ./gradlew assembleDebug --no-daemon --stacktrace
         working-directory: mobile/android
