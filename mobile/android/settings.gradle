@@ -4,9 +4,6 @@ pluginManagement {
 plugins {
     id("com.facebook.react.settings")
 }
-extensions.configure(com.facebook.react.ReactSettingsExtension) { os ->
-    os.autolinkLibrariesFromCommand()
-}
 rootProject.name = 'FoodBridge'
 include ':app'
 includeBuild('../node_modules/@react-native/gradle-plugin')
