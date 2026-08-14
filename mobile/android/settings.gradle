@@ -3,7 +3,10 @@ pluginManagement {
     if (!pluginPath.exists()) {
         pluginPath = new File(settingsDir, "../../node_modules/@react-native/gradle-plugin")
     }
-    includeBuild(pluginPath)
+    if (!pluginPath.exists()) {
+        throw new GradleException("@react-native/gradle-plugin not found at ${pluginPath.absolutePath}")
+    }
+    includeBuild(pluginPath.absolutePath)
     repositories {
         google()
         mavenCentral()
