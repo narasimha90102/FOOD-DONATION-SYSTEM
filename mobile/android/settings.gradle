@@ -1,5 +1,9 @@
 pluginManagement {
-    includeBuild("../node_modules/@react-native/gradle-plugin")
+    def gradlePluginPath = new File(settingsDir, "../node_modules/@react-native/gradle-plugin")
+    if (!gradlePluginPath.exists()) {
+        gradlePluginPath = new File(settingsDir, "../../node_modules/@react-native/gradle-plugin")
+    }
+    includeBuild(gradlePluginPath)
 }
 plugins {
     id("com.facebook.react.settings")
