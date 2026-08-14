@@ -1,5 +1,9 @@
 pluginManagement {
-    includeBuild("../node_modules/@react-native/gradle-plugin")
+    def pluginPath = new File(settingsDir, "../node_modules/@react-native/gradle-plugin")
+    if (!pluginPath.exists()) {
+        pluginPath = new File(settingsDir, "../../node_modules/@react-native/gradle-plugin")
+    }
+    includeBuild(pluginPath)
     repositories {
         google()
         mavenCentral()
