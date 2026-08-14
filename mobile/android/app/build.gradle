@@ -3,19 +3,19 @@ apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 
 react {
-    root = file("../../")
+    /* root path automatically resolved by React Native Gradle plugin */
 }
 
 android {
     ndkVersion rootProject.ext.ndkVersion
     buildToolsVersion rootProject.ext.buildToolsVersion
-    compileSdkVersion 34
+    compileSdkVersion rootProject.ext.compileSdkVersion
 
     namespace "com.foodbridge"
     defaultConfig {
         applicationId "com.foodbridge"
-        minSdkVersion 24
-        targetSdkVersion 34
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0.0"
     }
