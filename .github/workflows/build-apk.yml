@@ -69,7 +69,7 @@ jobs:
           GRADLE_OPTS: "-Dorg.gradle.jvmargs='-Xmx4096m -XX:MaxMetaspaceSize=1024m'"
         run: |
           ./gradlew clean --no-daemon
-          ./gradlew assembleDebug --no-daemon --stacktrace
+          ./gradlew assembleDebug --no-daemon --stacktrace --debug
         working-directory: mobile/android
 
       - name: Verify APK Artifact Exists
