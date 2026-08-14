@@ -36,16 +36,28 @@ jobs:
         run: |
           yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
-      - name: Install Mobile Dependencies
+      - name: Clean ALL Stale Native Build Artifacts
         run: |
-          npm audit fix --legacy-peer-deps || true
-          npm install --legacy-peer-deps
-        working-directory: mobile
+          echo "Removing stale Gradle caches..."
+          rm -rf ~/.gradle/caches/ ~/.gradle/wrapper/
+          rm -rf mobile/android/.gradle/ mobile/android/build/
+          rm -rf mobile/android/app/build/
+          rm -rf mobile/android/app/.cxx/
+          rm -rf mobile/android/.cxx/
+          echo "Removing stale node_modules build artifacts..."
+          rm -rf mobile/node_modules/react-native-screens/android/build/
+          rm -rf mobile/node_modules/react-native-screens/android/.cxx/
+          echo "Clearing Gradle daemon processes..."
+          pkill -9 -f "gradle" || true
+          sleep 2
 
-      - name: Clear Gradle Cache
+      - name: Clean node_modules and reinstall with lockfile
         run: |
-          rm -rf ~/.gradle/caches/
-          rm -rf mobile/android/.gradle/
+          echo "Removing node_modules..."
+          rm -rf mobile/node_modules/
+          echo "Installing exact versions from package-lock.json..."
+          npm ci --legacy-peer-deps
+        working-directory: mobile
 
       - name: Verify React Native Gradle Plugin Installed
         run: |
@@ -75,14 +87,19 @@ jobs:
           echo "ANDROID_NDK=$ANDROID_HOME/ndk/26.1.10909125" >> $GITHUB_ENV
           ls -la "$ANDROID_HOME/ndk/26.1.10909125" || true
 
+      - name: Verify Prefab Artifacts Available
+        run: |
+          echo "Checking for react-android AAR and Prefab..."
+          find ~/.gradle/caches -name "*react-android*.aar" -o -name "*fbjni*.aar" | head -20 || echo "AAR files not yet cached (will download)"
+
       - name: Clean & Build Android Debug APK
         env:
           NODE_ENV: production
           ANDROID_GRADLE_PLUGIN_CHECK_SDK_FOLDER_COMPATIBILITY: "false"
           _JAVA_OPTIONS: "-Xmx4096m -XX:MaxMetaspaceSize=1024m"
-          GRADLE_OPTS: "-Dorg.gradle.jvmargs='-Xmx4096m -XX:MaxMetaspaceSize=1024m'"
+          GRADLE_OPTS: "-Dorg.gradle.jvmargs='-Xmx4096m -XX:MaxMetaspaceSize=1024m' -Dorg.gradle.cxx.cmake.version=3.22.1"
         run: |
-          ./gradlew clean --no-daemon
+          ./gradlew clean --no-daemon --stacktrace
           ./gradlew assembleDebug --no-daemon --stacktrace --info
         working-directory: mobile/android
 
