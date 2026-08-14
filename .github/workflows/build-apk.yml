@@ -92,8 +92,7 @@ jobs:
           NODE_ENV: production
           ANDROID_GRADLE_PLUGIN_CHECK_SDK_FOLDER_COMPATIBILITY: "false"
           _JAVA_OPTIONS: "-Xmx6144m -XX:MaxMetaspaceSize=2048m"
-          GRADLE_OPTS: "-Dorg.gradle.jvmargs='-Xmx6144m -XX:MaxMetaspaceSize=2048m' -Dorg.gradle.cxx.cmake.version=3.28.0 -Dorg.gradle.cxx.ndk.version=26.3.11579264"
-          ANDROID_NDK_ROOT: ${{ env.ANDROID_HOME }}/ndk/26.3.11579264
+          GRADLE_OPTS: "-Dorg.gradle.cxx.cmake.version=3.28.0 -Dorg.gradle.cxx.ndk.version=26.3.11579264"
         run: |
           ./gradlew clean --no-daemon --stacktrace
           ./gradlew assembleDebug --no-daemon --stacktrace --info
