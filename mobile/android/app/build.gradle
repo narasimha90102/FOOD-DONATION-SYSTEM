@@ -40,6 +40,12 @@ android {
     }
 }
 
+project.ext.REACT_NATIVE_NODE_MODULES_DIR = "${rootProject.projectDir}/../node_modules/react-native"
+project.ext.compileSdkVersion = rootProject.ext.compileSdkVersion
+project.ext.minSdkVersion = rootProject.ext.minSdkVersion
+project.ext.targetSdkVersion = rootProject.ext.targetSdkVersion
+
 dependencies {
     implementation("com.facebook.react:react-android")
 }
+
