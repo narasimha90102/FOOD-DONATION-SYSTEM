@@ -4,7 +4,6 @@ apply plugin: "com.facebook.react"
 
 react {
     root = file("../../")
-    entryFile = file("../index.js")
 }
 
 android {
