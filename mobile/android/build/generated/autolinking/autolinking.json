@@ -34,7 +34,7 @@
       "platforms": {
         "ios": {
           "podspecPath": "C:\\Users\\naras\\OneDrive\\Desktop\\FOOD  DOANTION\\mobile\\node_modules\\react-native-safe-area-context\\react-native-safe-area-context.podspec",
-          "version": "4.14.1",
+          "version": "4.10.5",
           "configurations": [],
           "scriptPhases": []
         },
@@ -62,7 +62,7 @@
       "platforms": {
         "ios": {
           "podspecPath": "C:\\Users\\naras\\OneDrive\\Desktop\\FOOD  DOANTION\\mobile\\node_modules\\react-native-screens\\RNScreens.podspec",
-          "version": "4.27.0",
+          "version": "3.35.0",
           "configurations": [],
           "scriptPhases": []
         },
@@ -81,15 +81,7 @@
             "RNSScreenStackComponentDescriptor",
             "RNSSearchBarComponentDescriptor",
             "RNSScreenComponentDescriptor",
-            "RNSScreenFooterComponentDescriptor",
-            "RNSScreenContentWrapperComponentDescriptor",
-            "RNSModalScreenComponentDescriptor",
-            "RNSTabsHostComponentDescriptor",
-            "RNSSafeAreaViewComponentDescriptor",
-            "RNSStackScreenComponentDescriptor",
-            "RNSStackHeaderConfigComponentDescriptor",
-            "RNSStackHeaderSubviewComponentDescriptor",
-            "RNSFormSheetHostComponentDescriptor"
+            "RNSModalScreenComponentDescriptor"
           ],
           "cmakeListsPath": "C:/Users/naras/OneDrive/Desktop/FOOD  DOANTION/mobile/node_modules/react-native-screens/android/src/main/jni/CMakeLists.txt",
           "cxxModuleCMakeListsModuleName": null,

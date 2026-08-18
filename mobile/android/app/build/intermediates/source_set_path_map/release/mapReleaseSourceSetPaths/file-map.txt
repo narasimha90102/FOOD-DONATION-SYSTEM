@@ -1,0 +1,40 @@
+com.foodbridge.app-savedstate-1.2.0-0 C:\Users\naras\.gradle\caches\8.10.2\transforms\03175ad42f9b3eff6bc8a69fb19e2e63\transformed\savedstate-1.2.0\res
+com.foodbridge.app-lifecycle-viewmodel-2.5.1-1 C:\Users\naras\.gradle\caches\8.10.2\transforms\0c4b930339a29074012b86d469f97483\transformed\lifecycle-viewmodel-2.5.1\res
+com.foodbridge.app-annotation-experimental-1.3.0-2 C:\Users\naras\.gradle\caches\8.10.2\transforms\1bc43c9811fb31e3cbb228af27ce15f3\transformed\annotation-experimental-1.3.0\res
+com.foodbridge.app-drawerlayout-1.1.1-3 C:\Users\naras\.gradle\caches\8.10.2\transforms\1dd8eaea989fc339592b28bc0a97cd21\transformed\drawerlayout-1.1.1\res
+com.foodbridge.app-startup-runtime-1.1.1-4 C:\Users\naras\.gradle\caches\8.10.2\transforms\264138752b06d182b80f755d4a90e457\transformed\startup-runtime-1.1.1\res
+com.foodbridge.app-lifecycle-runtime-2.5.1-5 C:\Users\naras\.gradle\caches\8.10.2\transforms\2a218de8453d6d3ce14c6fb47cb56c7e\transformed\lifecycle-runtime-2.5.1\res
+com.foodbridge.app-viewpager2-1.0.0-6 C:\Users\naras\.gradle\caches\8.10.2\transforms\32a6a5eaded0cfccc622f82c91d8e66b\transformed\viewpager2-1.0.0\res
+com.foodbridge.app-appcompat-resources-1.6.1-7 C:\Users\naras\.gradle\caches\8.10.2\transforms\498d8425a0ad2f1e6a464599039b4b09\transformed\appcompat-resources-1.6.1\res
+com.foodbridge.app-activity-1.6.0-8 C:\Users\naras\.gradle\caches\8.10.2\transforms\576ebd1961fc3e95bc34a4b9ddcd515e\transformed\activity-1.6.0\res
+com.foodbridge.app-lifecycle-viewmodel-savedstate-2.5.1-9 C:\Users\naras\.gradle\caches\8.10.2\transforms\57fbbd361615f16982e9db7f1521a0b4\transformed\lifecycle-viewmodel-savedstate-2.5.1\res
+com.foodbridge.app-swiperefreshlayout-1.1.0-10 C:\Users\naras\.gradle\caches\8.10.2\transforms\58bbd8c36c2c4ac132c58ca4e1d6a861\transformed\swiperefreshlayout-1.1.0\res
+com.foodbridge.app-autofill-1.1.0-11 C:\Users\naras\.gradle\caches\8.10.2\transforms\620bfb01f0d4369c982eaea2ed126661\transformed\autofill-1.1.0\res
+com.foodbridge.app-fragment-1.3.6-12 C:\Users\naras\.gradle\caches\8.10.2\transforms\6424e71745dfc3f19694f45fd1681d77\transformed\fragment-1.3.6\res
+com.foodbridge.app-lifecycle-process-2.4.1-13 C:\Users\naras\.gradle\caches\8.10.2\transforms\775d7679eeb13f1f09aa07c940f2fd2c\transformed\lifecycle-process-2.4.1\res
+com.foodbridge.app-tracing-1.1.0-14 C:\Users\naras\.gradle\caches\8.10.2\transforms\82f5605f4f83458dc7b9109e96889c24\transformed\tracing-1.1.0\res
+com.foodbridge.app-core-1.9.0-15 C:\Users\naras\.gradle\caches\8.10.2\transforms\83cc3cef3b03757d4937f01fb2fcf36f\transformed\core-1.9.0\res
+com.foodbridge.app-constraintlayout-2.0.1-16 C:\Users\naras\.gradle\caches\8.10.2\transforms\90bb71602bc3795137c2981a86238891\transformed\constraintlayout-2.0.1\res
+com.foodbridge.app-react-android-0.76.5-release-17 C:\Users\naras\.gradle\caches\8.10.2\transforms\94ddc13ab64930a2acea845302bc7cf3\transformed\react-android-0.76.5-release\res
+com.foodbridge.app-transition-1.2.0-18 C:\Users\naras\.gradle\caches\8.10.2\transforms\96bb15dcdfd9947d7c2bf39925fa2bdf\transformed\transition-1.2.0\res
+com.foodbridge.app-cardview-1.0.0-19 C:\Users\naras\.gradle\caches\8.10.2\transforms\970a0ccaffa703bb55c26faa4587e7ee\transformed\cardview-1.0.0\res
+com.foodbridge.app-core-ktx-1.9.0-20 C:\Users\naras\.gradle\caches\8.10.2\transforms\971cb3f996e467dddbb331f14b53aa0b\transformed\core-ktx-1.9.0\res
+com.foodbridge.app-appcompat-1.6.1-21 C:\Users\naras\.gradle\caches\8.10.2\transforms\a39f914722ffcc3dcfeea5413343caed\transformed\appcompat-1.6.1\res
+com.foodbridge.app-emoji2-1.2.0-22 C:\Users\naras\.gradle\caches\8.10.2\transforms\abd58592d8ba095937609e5febcace5d\transformed\emoji2-1.2.0\res
+com.foodbridge.app-drawee-3.2.0-23 C:\Users\naras\.gradle\caches\8.10.2\transforms\b9b28743520acd759249cd6e91b71b04\transformed\drawee-3.2.0\res
+com.foodbridge.app-lifecycle-livedata-core-2.5.1-24 C:\Users\naras\.gradle\caches\8.10.2\transforms\c13230b7979da038abd068788de03480\transformed\lifecycle-livedata-core-2.5.1\res
+com.foodbridge.app-recyclerview-1.1.0-25 C:\Users\naras\.gradle\caches\8.10.2\transforms\d38509b8a9c223074776d556231e1a3c\transformed\recyclerview-1.1.0\res
+com.foodbridge.app-material-1.6.1-26 C:\Users\naras\.gradle\caches\8.10.2\transforms\d6eece7112f133ecdd950c04c860a487\transformed\material-1.6.1\res
+com.foodbridge.app-emoji2-views-helper-1.2.0-27 C:\Users\naras\.gradle\caches\8.10.2\transforms\f2dd209ebf64ae231143f3b92651226a\transformed\emoji2-views-helper-1.2.0\res
+com.foodbridge.app-coordinatorlayout-1.2.0-28 C:\Users\naras\.gradle\caches\8.10.2\transforms\f69915bbacf1931dd90991d81f23f5d3\transformed\coordinatorlayout-1.2.0\res
+com.foodbridge.app-res-29 C:\Users\naras\OneDrive\Desktop\FOOD  DOANTION\mobile\android\app\build\generated\res\createBundleReleaseJsAndAssets
+com.foodbridge.app-pngs-30 C:\Users\naras\OneDrive\Desktop\FOOD  DOANTION\mobile\android\app\build\generated\res\pngs\release
+com.foodbridge.app-resValues-31 C:\Users\naras\OneDrive\Desktop\FOOD  DOANTION\mobile\android\app\build\generated\res\resValues\release
+com.foodbridge.app-packageReleaseResources-32 C:\Users\naras\OneDrive\Desktop\FOOD  DOANTION\mobile\android\app\build\intermediates\incremental\release\packageReleaseResources\merged.dir
+com.foodbridge.app-packageReleaseResources-33 C:\Users\naras\OneDrive\Desktop\FOOD  DOANTION\mobile\android\app\build\intermediates\incremental\release\packageReleaseResources\stripped.dir
+com.foodbridge.app-release-34 C:\Users\naras\OneDrive\Desktop\FOOD  DOANTION\mobile\android\app\build\intermediates\merged_res\release\mergeReleaseResources
+com.foodbridge.app-main-35 C:\Users\naras\OneDrive\Desktop\FOOD  DOANTION\mobile\android\app\src\main\res
+com.foodbridge.app-release-36 C:\Users\naras\OneDrive\Desktop\FOOD  DOANTION\mobile\android\app\src\release\res
+com.foodbridge.app-release-37 C:\Users\naras\OneDrive\Desktop\FOOD  DOANTION\mobile\node_modules\@react-native-async-storage\async-storage\android\build\intermediates\packaged_res\release\packageReleaseResources
+com.foodbridge.app-release-38 C:\Users\naras\OneDrive\Desktop\FOOD  DOANTION\mobile\node_modules\react-native-safe-area-context\android\build\intermediates\packaged_res\release\packageReleaseResources
+com.foodbridge.app-release-39 C:\Users\naras\OneDrive\Desktop\FOOD  DOANTION\mobile\node_modules\react-native-screens\android\build\intermediates\packaged_res\release\packageReleaseResources

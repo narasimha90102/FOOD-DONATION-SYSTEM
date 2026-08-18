@@ -1,0 +1,19 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.foodbridge.app-mergeReleaseResources-32:/values-ldltr-v21/values-ldltr-v21.xml",
+            "map": [
+                {
+                    "source": "C:\\Users\\naras\\.gradle\\caches\\8.10.2\\transforms\\a39f914722ffcc3dcfeea5413343caed\\transformed\\appcompat-1.6.1\\res\\values-ldltr-v21\\values-ldltr-v21.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "112",
+                        "endOffsets": "163"
+                    }
+                }
+            ]
+        }
+    ]
+}

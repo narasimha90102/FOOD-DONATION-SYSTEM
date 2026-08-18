@@ -1,0 +1,110 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="com.foodbridge"
+4    android:versionCode="2"
+5    android:versionName="1.0.1" >
+6
+7    <uses-sdk
+8        android:minSdkVersion="24"
+9        android:targetSdkVersion="35" />
+10
+11    <uses-permission android:name="android.permission.INTERNET" />
+11-->C:\Users\naras\OneDrive\Desktop\FOOD  DOANTION\mobile\android\app\src\main\AndroidManifest.xml:3:5-67
+11-->C:\Users\naras\OneDrive\Desktop\FOOD  DOANTION\mobile\android\app\src\main\AndroidManifest.xml:3:22-64
+12    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+12-->C:\Users\naras\OneDrive\Desktop\FOOD  DOANTION\mobile\android\app\src\main\AndroidManifest.xml:4:5-79
+12-->C:\Users\naras\OneDrive\Desktop\FOOD  DOANTION\mobile\android\app\src\main\AndroidManifest.xml:4:22-76
+13    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+13-->C:\Users\naras\OneDrive\Desktop\FOOD  DOANTION\mobile\android\app\src\main\AndroidManifest.xml:5:5-81
+13-->C:\Users\naras\OneDrive\Desktop\FOOD  DOANTION\mobile\android\app\src\main\AndroidManifest.xml:5:22-78
+14    <uses-permission android:name="android.permission.VIBRATE" />
+14-->C:\Users\naras\OneDrive\Desktop\FOOD  DOANTION\mobile\android\app\src\main\AndroidManifest.xml:6:5-66
+14-->C:\Users\naras\OneDrive\Desktop\FOOD  DOANTION\mobile\android\app\src\main\AndroidManifest.xml:6:22-63
+15
+16    <permission
+16-->[androidx.core:core:1.9.0] C:\Users\naras\.gradle\caches\8.10.2\transforms\83cc3cef3b03757d4937f01fb2fcf36f\transformed\core-1.9.0\AndroidManifest.xml:22:5-24:47
+17        android:name="com.foodbridge.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+17-->[androidx.core:core:1.9.0] C:\Users\naras\.gradle\caches\8.10.2\transforms\83cc3cef3b03757d4937f01fb2fcf36f\transformed\core-1.9.0\AndroidManifest.xml:23:9-81
+18        android:protectionLevel="signature" />
+18-->[androidx.core:core:1.9.0] C:\Users\naras\.gradle\caches\8.10.2\transforms\83cc3cef3b03757d4937f01fb2fcf36f\transformed\core-1.9.0\AndroidManifest.xml:24:9-44
+19
+20    <uses-permission android:name="com.foodbridge.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+20-->[androidx.core:core:1.9.0] C:\Users\naras\.gradle\caches\8.10.2\transforms\83cc3cef3b03757d4937f01fb2fcf36f\transformed\core-1.9.0\AndroidManifest.xml:26:5-97
+20-->[androidx.core:core:1.9.0] C:\Users\naras\.gradle\caches\8.10.2\transforms\83cc3cef3b03757d4937f01fb2fcf36f\transformed\core-1.9.0\AndroidManifest.xml:26:22-94
+21
+22    <application
+22-->C:\Users\naras\OneDrive\Desktop\FOOD  DOANTION\mobile\android\app\src\main\AndroidManifest.xml:8:5-29:19
+23        android:name="com.foodbridge.MainApplication"
+23-->C:\Users\naras\OneDrive\Desktop\FOOD  DOANTION\mobile\android\app\src\main\AndroidManifest.xml:9:7-38
+24        android:allowBackup="false"
+24-->C:\Users\naras\OneDrive\Desktop\FOOD  DOANTION\mobile\android\app\src\main\AndroidManifest.xml:13:7-34
+25        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
+25-->[androidx.core:core:1.9.0] C:\Users\naras\.gradle\caches\8.10.2\transforms\83cc3cef3b03757d4937f01fb2fcf36f\transformed\core-1.9.0\AndroidManifest.xml:28:18-86
+26        android:extractNativeLibs="false"
+27        android:icon="@mipmap/ic_launcher"
+27-->C:\Users\naras\OneDrive\Desktop\FOOD  DOANTION\mobile\android\app\src\main\AndroidManifest.xml:11:7-41
+28        android:label="@string/app_name"
+28-->C:\Users\naras\OneDrive\Desktop\FOOD  DOANTION\mobile\android\app\src\main\AndroidManifest.xml:10:7-39
+29        android:roundIcon="@mipmap/ic_launcher_round"
+29-->C:\Users\naras\OneDrive\Desktop\FOOD  DOANTION\mobile\android\app\src\main\AndroidManifest.xml:12:7-52
+30        android:theme="@style/AppTheme"
+30-->C:\Users\naras\OneDrive\Desktop\FOOD  DOANTION\mobile\android\app\src\main\AndroidManifest.xml:14:7-38
+31        android:usesCleartextTraffic="true" >
+31-->C:\Users\naras\OneDrive\Desktop\FOOD  DOANTION\mobile\android\app\src\main\AndroidManifest.xml:15:7-42
+32        <activity
+32-->C:\Users\naras\OneDrive\Desktop\FOOD  DOANTION\mobile\android\app\src\main\AndroidManifest.xml:17:7-28:18
+33            android:name="com.foodbridge.MainActivity"
+33-->C:\Users\naras\OneDrive\Desktop\FOOD  DOANTION\mobile\android\app\src\main\AndroidManifest.xml:18:9-37
+34            android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
+34-->C:\Users\naras\OneDrive\Desktop\FOOD  DOANTION\mobile\android\app\src\main\AndroidManifest.xml:20:9-118
+35            android:exported="true"
+35-->C:\Users\naras\OneDrive\Desktop\FOOD  DOANTION\mobile\android\app\src\main\AndroidManifest.xml:23:9-32
+36            android:label="@string/app_name"
+36-->C:\Users\naras\OneDrive\Desktop\FOOD  DOANTION\mobile\android\app\src\main\AndroidManifest.xml:19:9-41
+37            android:launchMode="singleTask"
+37-->C:\Users\naras\OneDrive\Desktop\FOOD  DOANTION\mobile\android\app\src\main\AndroidManifest.xml:21:9-40
+38            android:windowSoftInputMode="adjustResize" >
+38-->C:\Users\naras\OneDrive\Desktop\FOOD  DOANTION\mobile\android\app\src\main\AndroidManifest.xml:22:9-51
+39            <intent-filter>
+39-->C:\Users\naras\OneDrive\Desktop\FOOD  DOANTION\mobile\android\app\src\main\AndroidManifest.xml:24:9-27:25
+40                <action android:name="android.intent.action.MAIN" />
+40-->C:\Users\naras\OneDrive\Desktop\FOOD  DOANTION\mobile\android\app\src\main\AndroidManifest.xml:25:13-65
+40-->C:\Users\naras\OneDrive\Desktop\FOOD  DOANTION\mobile\android\app\src\main\AndroidManifest.xml:25:21-62
+41
+42                <category android:name="android.intent.category.LAUNCHER" />
+42-->C:\Users\naras\OneDrive\Desktop\FOOD  DOANTION\mobile\android\app\src\main\AndroidManifest.xml:26:13-73
+42-->C:\Users\naras\OneDrive\Desktop\FOOD  DOANTION\mobile\android\app\src\main\AndroidManifest.xml:26:23-70
+43            </intent-filter>
+44        </activity>
+45
+46        <provider
+46-->[androidx.emoji2:emoji2:1.2.0] C:\Users\naras\.gradle\caches\8.10.2\transforms\abd58592d8ba095937609e5febcace5d\transformed\emoji2-1.2.0\AndroidManifest.xml:24:9-32:20
+47            android:name="androidx.startup.InitializationProvider"
+47-->[androidx.emoji2:emoji2:1.2.0] C:\Users\naras\.gradle\caches\8.10.2\transforms\abd58592d8ba095937609e5febcace5d\transformed\emoji2-1.2.0\AndroidManifest.xml:25:13-67
+48            android:authorities="com.foodbridge.androidx-startup"
+48-->[androidx.emoji2:emoji2:1.2.0] C:\Users\naras\.gradle\caches\8.10.2\transforms\abd58592d8ba095937609e5febcace5d\transformed\emoji2-1.2.0\AndroidManifest.xml:26:13-68
+49            android:exported="false" >
+49-->[androidx.emoji2:emoji2:1.2.0] C:\Users\naras\.gradle\caches\8.10.2\transforms\abd58592d8ba095937609e5febcace5d\transformed\emoji2-1.2.0\AndroidManifest.xml:27:13-37
+50            <meta-data
+50-->[androidx.emoji2:emoji2:1.2.0] C:\Users\naras\.gradle\caches\8.10.2\transforms\abd58592d8ba095937609e5febcace5d\transformed\emoji2-1.2.0\AndroidManifest.xml:29:13-31:52
+51                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+51-->[androidx.emoji2:emoji2:1.2.0] C:\Users\naras\.gradle\caches\8.10.2\transforms\abd58592d8ba095937609e5febcace5d\transformed\emoji2-1.2.0\AndroidManifest.xml:30:17-75
+52                android:value="androidx.startup" />
+52-->[androidx.emoji2:emoji2:1.2.0] C:\Users\naras\.gradle\caches\8.10.2\transforms\abd58592d8ba095937609e5febcace5d\transformed\emoji2-1.2.0\AndroidManifest.xml:31:17-49
+53            <meta-data
+53-->[androidx.lifecycle:lifecycle-process:2.4.1] C:\Users\naras\.gradle\caches\8.10.2\transforms\775d7679eeb13f1f09aa07c940f2fd2c\transformed\lifecycle-process-2.4.1\AndroidManifest.xml:31:13-33:52
+54                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+54-->[androidx.lifecycle:lifecycle-process:2.4.1] C:\Users\naras\.gradle\caches\8.10.2\transforms\775d7679eeb13f1f09aa07c940f2fd2c\transformed\lifecycle-process-2.4.1\AndroidManifest.xml:32:17-78
+55                android:value="androidx.startup" />
+55-->[androidx.lifecycle:lifecycle-process:2.4.1] C:\Users\naras\.gradle\caches\8.10.2\transforms\775d7679eeb13f1f09aa07c940f2fd2c\transformed\lifecycle-process-2.4.1\AndroidManifest.xml:33:17-49
+56        </provider>
+57
+58        <meta-data
+58-->[com.facebook.soloader:soloader:0.12.1] C:\Users\naras\.gradle\caches\8.10.2\transforms\f67f4dc75996261b0ee41f7d5034635e\transformed\soloader-0.12.1\AndroidManifest.xml:12:9-14:37
+59            android:name="com.facebook.soloader.enabled"
+59-->[com.facebook.soloader:soloader:0.12.1] C:\Users\naras\.gradle\caches\8.10.2\transforms\f67f4dc75996261b0ee41f7d5034635e\transformed\soloader-0.12.1\AndroidManifest.xml:13:13-57
+60            android:value="false" />
+60-->[com.facebook.soloader:soloader:0.12.1] C:\Users\naras\.gradle\caches\8.10.2\transforms\f67f4dc75996261b0ee41f7d5034635e\transformed\soloader-0.12.1\AndroidManifest.xml:14:13-34
+61    </application>
+62
+63</manifest>

@@ -1,0 +1,38 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.foodbridge.app-mergeReleaseResources-32:/values-v16/values-v16.xml",
+            "map": [
+                {
+                    "source": "C:\\Users\\naras\\.gradle\\caches\\8.10.2\\transforms\\83cc3cef3b03757d4937f01fb2fcf36f\\transformed\\core-1.9.0\\res\\values-v16\\values-v16.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "65",
+                        "endOffsets": "116"
+                    }
+                },
+                {
+                    "source": "C:\\Users\\naras\\.gradle\\caches\\8.10.2\\transforms\\a39f914722ffcc3dcfeea5413343caed\\transformed\\appcompat-1.6.1\\res\\values-v16\\values-v16.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endLines": "5",
+                        "endColumns": "12",
+                        "endOffsets": "223"
+                    },
+                    "to": {
+                        "startLines": "3",
+                        "startColumns": "4",
+                        "startOffsets": "121",
+                        "endLines": "6",
+                        "endColumns": "12",
+                        "endOffsets": "289"
+                    }
+                }
+            ]
+        }
+    ]
+}
