@@ -67,7 +67,7 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
       name,
       email,
       password,
-      role: role || 'DONOR',
+      role: (role || 'DONOR').toUpperCase(),
       address: address || '',
       phoneNumber: phoneNumber || '',
       location: locationData,
@@ -209,9 +209,8 @@ export const googleLogin = async (req: Request, res: Response, next: NextFunctio
       user = await User.create({
         name: name || 'Google User',
         email,
-        // Set dynamic strong password for Google users as they won't use direct forms
         password: Math.random().toString(36).slice(-10) + 'GoOgLe#2026',
-        role: role || 'DONOR',
+        role: (role || 'DONOR').toUpperCase(),
         isVerified: true, // Google verifies user emails natively
         profilePicture: profilePicture || '',
         location: locationData,
