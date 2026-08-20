@@ -78,6 +78,8 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
       volunteerStatus: role === 'VOLUNTEER' ? 'ACTIVE' : undefined,
     });
 
+    console.log(`[Auth] New user registered successfully: ${user.email} (Role: ${user.role})`);
+
     // Return token directly — user is immediately active
     if (role === 'NGO' || role === 'VOLUNTEER') {
       return res.status(201).json({
@@ -88,7 +90,8 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
     }
 
     sendTokenResponse(user, 201, res);
-  } catch (error) {
+  } catch (error: any) {
+    console.error(`[Auth] Registration Failed: ${error.message}`, error);
     next(error);
   }
 };

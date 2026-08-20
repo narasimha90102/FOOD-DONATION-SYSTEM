@@ -52,7 +52,7 @@ export const NotificationsScreen = () => {
           }
           renderItem={({ item }) => (
             <TouchableOpacity onPress={() => handleMarkRead(item._id)}>
-              <Card style={[styles.card, item.read ? styles.readCard : null]}>
+              <Card style={styles.card}>
                 <View style={styles.row}>
                   <Text style={styles.title}>{item.title || 'System Notification'}</Text>
                   {!item.read ? <View style={styles.dot} /> : null}
