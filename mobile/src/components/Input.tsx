@@ -6,13 +6,20 @@ interface InputProps extends TextInputProps {
   error?: string;
 }
 
-export const Input: React.FC<InputProps> = ({ label, error, style, ...props }) => {
+export const Input: React.FC<InputProps> = ({ label, error, style, multiline, ...props }) => {
   return (
     <View style={styles.container}>
       <Text style={styles.label}>{label}</Text>
       <TextInput
-        style={[styles.input, error ? styles.inputError : null, style]}
+        style={[
+          styles.input,
+          multiline ? styles.multilineInput : null,
+          error ? styles.inputError : null,
+          style,
+        ]}
         placeholderTextColor="#64748B"
+        multiline={multiline}
+        textAlignVertical={multiline ? 'top' : 'center'}
         {...props}
       />
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
@@ -38,7 +45,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     color: '#FFFFFF',
-    fontSize: 15,
+    fontSize: 14,
+  },
+  multilineInput: {
+    minHeight: 88,
+    paddingTop: 12,
+    paddingBottom: 12,
   },
   inputError: {
     borderColor: '#EF4444',

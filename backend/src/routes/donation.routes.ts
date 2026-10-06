@@ -12,19 +12,22 @@ import {
   updateDonation,
   volunteerCancelDonation,
   repairCorruptedCoordinates,
+  calculateRoute,
+  getDonationTracking,
 } from '../controllers/donation.controller';
 import { protect, authorize } from '../middlewares/auth';
 
 const router = Router();
 
-// Apply protective shield to all routes
 router.use(protect);
 
 router.post('/', authorize('DONOR'), createDonation);
+router.post('/route', calculateRoute);
 router.post('/repair-coordinates', repairCorruptedCoordinates);
 router.get('/', getDonations);
 router.get('/nearby', authorize('NGO'), getNearbyDonations);
 router.get('/donor-stats', authorize('DONOR'), getDonorStats);
+router.get('/:id/tracking', getDonationTracking);
 router.get('/:id', getDonationById);
 router.put('/:id/accept', authorize('NGO'), acceptDonation);
 router.put('/:id/status', updateDonationStatus);
@@ -34,3 +37,4 @@ router.put('/:id/volunteer-cancel', authorize('VOLUNTEER'), volunteerCancelDonat
 router.put('/:id', authorize('DONOR', 'ADMIN'), updateDonation);
 
 export default router;
+

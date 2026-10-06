@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import mongoose from 'mongoose';
 import { env } from '../config/env';
 import { User } from '../models/User';
 import { IUser } from '../types';
@@ -24,12 +25,21 @@ export const protect = async (req: AuthRequest, res: Response, next: NextFunctio
     return res.status(401).json({ success: false, message: 'Not authorized to access this route. Token missing.' });
   }
 
+  // Fast check: If MongoDB is disconnected, return 503 immediately
+  if (mongoose.connection.readyState !== 1) {
+    return res.status(503).json({
+      success: false,
+      message: 'Database connection currently offline. Please verify internet connection or MongoDB Atlas IP Whitelist.',
+    });
+  }
+
   try {
     // Verify token
     const decoded = jwt.verify(token, env.JWT_SECRET) as { id: string };
 
     // Fetch user from DB
     const user = await User.findById(decoded.id).select('+password');
+
     if (!user) {
       return res.status(401).json({ success: false, message: 'User matching token no longer exists.' });
     }
@@ -52,6 +62,33 @@ export const protect = async (req: AuthRequest, res: Response, next: NextFunctio
     console.error('[AuthMiddleware] Token verification error:', error);
     return res.status(401).json({ success: false, message: 'Not authorized. Token invalid or expired.' });
   }
+};
+
+/**
+ * Optional authentication: Binds req.user if a valid token is provided, otherwise proceeds.
+ */
+export const optionalAuth = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  let token: string | undefined;
+
+  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+    token = req.headers.authorization.split(' ')[1];
+  }
+
+  if (!token) {
+    return next();
+  }
+
+  try {
+    const decoded = jwt.verify(token, env.JWT_SECRET) as { id: string };
+    const user = await User.findById(decoded.id);
+    if (user && !user.isBlocked) {
+      req.user = user;
+    }
+  } catch (err) {
+    // Proceed without req.user on token error
+  }
+
+  next();
 };
 
 /**

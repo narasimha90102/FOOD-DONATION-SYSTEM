@@ -10,13 +10,23 @@ import com.facebook.react.defaults.DefaultReactHost.getDefaultReactHost
 import com.facebook.react.defaults.DefaultReactNativeHost
 import com.facebook.react.soloader.OpenSourceMergedSoMapping
 import com.facebook.soloader.SoLoader
+import com.reactnativecommunity.webview.RNCWebViewPackage
+import com.ReactNativeBlobUtil.ReactNativeBlobUtilPackage
 
 class MainApplication : Application(), ReactApplication {
 
   override val reactNativeHost: ReactNativeHost =
       object : DefaultReactNativeHost(this) {
-        override fun getPackages(): List<ReactPackage> =
-            PackageList(this).packages
+        override fun getPackages(): List<ReactPackage> {
+          val packages = PackageList(this).packages.toMutableList()
+          if (packages.none { it is RNCWebViewPackage }) {
+            packages.add(RNCWebViewPackage())
+          }
+          if (packages.none { it is ReactNativeBlobUtilPackage }) {
+            packages.add(ReactNativeBlobUtilPackage())
+          }
+          return packages
+        }
 
         override fun getJSMainModuleName(): String = "index"
 

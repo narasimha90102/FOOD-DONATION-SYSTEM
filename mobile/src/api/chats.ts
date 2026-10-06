@@ -1,12 +1,16 @@
 import { apiClient } from './client';
 
 export const chatApi = {
-  getMessages: async (donationId: string) => {
-    const res = await apiClient.get(`/chats/${donationId}`);
+  getChats: async () => {
+    const res = await apiClient.get('/chats');
     return res.data;
   },
-  sendMessage: async (donationId: string, text: string) => {
-    const res = await apiClient.post(`/chats/${donationId}`, { text });
+  getMessages: async (chatId: string) => {
+    const res = await apiClient.get(`/chats/${chatId}`);
+    return res.data;
+  },
+  sendMessage: async (chatId: string, text: string, imageUrl?: string) => {
+    const res = await apiClient.post(`/chats/${chatId}/messages`, { text, imageUrl });
     return res.data;
   },
 };

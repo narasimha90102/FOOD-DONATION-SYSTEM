@@ -24,8 +24,8 @@ export default function LandingPage() {
 
   const features = [
     {
-      title: 'Microbiological AI Expiry',
-      desc: 'Predicts precise safety consumption hours based on biological decay constants and storage mediums.',
+      title: 'Proximity Engine',
+      desc: 'Connects surplus food to closest NGOs in real-time using precise distance calculations.',
       icon: Zap,
     },
     {

@@ -31,3 +31,8 @@ allprojects {
         maven { url 'https://www.jitpack.io' }
     }
 }
+
+subprojects { project ->
+    project.buildDir = "${rootProject.buildDir}/${project.name}"
+}
+

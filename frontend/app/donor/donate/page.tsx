@@ -148,40 +148,9 @@ export default function DonatePage() {
     setPrepTime(formattedPrep);
     setExpTime(formattedExp);
     setTempExpTime(formattedExp);
-    // Default address from user profile if available — NOT a hardcoded fallback
-    if (user?.address) {
-      setAddress(user.address);
-    }
-    // Coordinates in create mode start as null — LocationPicker will call GPS automatically
-  }, [user, id]);
-
-  // Run AI predictor dynamically when inputs change
-  useEffect(() => {
-    if (foodCategory && prepTime && expTime && storage) {
-      triggerAIPrediction();
-    }
-  }, [foodCategory, prepTime, expTime, storage]);
-
-  const triggerAIPrediction = async () => {
-    try {
-      setCheckingAi(true);
-      setAiError('');
-      const prediction = await ApiService.post('/ai/predict', {
-        foodCategory,
-        preparationTime: new Date(prepTime),
-        estimatedExpiryTime: new Date(expTime),
-        storageCondition: storage,
-      });
-
-      setAiPredict(prediction.prediction);
-    } catch (err: any) {
-      console.error('[AI Predict Error] Ollama service down:', err);
-      setAiError(err.message || 'Local AI service is unavailable. Please start Ollama.');
-      setAiPredict(null);
-    } finally {
-      setCheckingAi(false);
-    }
-  };
+    // Initial address starts empty per requirements
+    setAddress('');
+  }, [id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -287,7 +256,7 @@ export default function DonatePage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="max-w-3xl mx-auto w-full">
         
         {/* Form panel (Takes 2 cols) */}
         <form onSubmit={handleSubmit} className="lg:col-span-2 glass-panel p-8 border-white/5 space-y-6">
@@ -430,103 +399,6 @@ export default function DonatePage() {
             <span>{loading ? (id ? 'Updating details...' : 'Redistributing surplus...') : (id ? 'Save Changes' : 'Submit Food Donation Listing')}</span>
           </button>
         </form>
-
-        {/* AI Predict Panel (Takes 1 col) */}
-        <div className="flex flex-col gap-6">
-          <div className="border-b border-white/5 pb-2">
-            <h3 className="text-lg font-bold text-white text-outfit">AI Freshness Engine</h3>
-          </div>
-
-          <div className="glass-panel p-6 border-white/5 flex flex-col gap-6">
-            
-            <div className="flex items-center justify-between">
-              <span className="text-slate-400 text-xs font-semibold">Microbiological Freshness</span>
-              <span className="bg-emerald-500/10 text-emerald-400 text-[10px] px-2 py-0.5 rounded font-bold uppercase flex items-center gap-1">
-                <Sparkles className="h-3 w-3" /> AI Core
-              </span>
-            </div>
-
-            {checkingAi ? (
-              <div className="py-20 text-center flex flex-col items-center justify-center gap-3">
-                <RefreshCw className="h-6 w-6 text-brand-500 animate-spin" />
-                <span className="text-xs text-slate-500">Checking microbial growth rates...</span>
-              </div>
-            ) : aiError ? (
-              <div className="bg-red-500/10 border border-red-500/25 p-4 rounded-xl flex flex-col gap-2 text-red-400 text-xs text-left leading-relaxed">
-                <div className="flex items-center gap-2 font-bold">
-                  <ShieldAlert className="h-4.5 w-4.5 shrink-0" />
-                  <span>AI Verification Unavailable</span>
-                </div>
-                <p className="text-slate-300">{aiError}</p>
-                <button
-                  type="button"
-                  onClick={triggerAIPrediction}
-                  className="mt-2 w-full bg-red-500/15 hover:bg-red-500/25 border border-red-500/20 text-red-300 font-bold py-2 rounded-lg text-[10px] uppercase transition-colors"
-                >
-                  Retry Scan
-                </button>
-              </div>
-            ) : aiPredict ? (
-              <div className="flex flex-col gap-6 text-center">
-                
-                {/* Circular Freshness Indicator */}
-                <div className="relative w-36 h-36 mx-auto flex items-center justify-center">
-                  
-                  {/* SVG progress circle */}
-                  <svg className="w-full h-full transform -rotate-90">
-                    <circle cx="72" cy="72" r="64" className="stroke-white/5 fill-none" strokeWidth="8" />
-                    <circle
-                      cx="72"
-                      cy="72"
-                      r="64"
-                      className={`fill-none transition-all duration-500 ${
-                        aiPredict.aiRiskLevel === 'danger' ? 'stroke-red-500' :
-                        aiPredict.aiRiskLevel === 'warning' ? 'stroke-amber-500' : 'stroke-brand-500'
-                      }`}
-                      strokeWidth="8"
-                      strokeDasharray={402}
-                      strokeDashoffset={402 - (402 * aiPredict.aiFreshnessScore) / 100}
-                    />
-                  </svg>
-                  
-                  <div className="absolute flex flex-col">
-                    <span className="text-3xl font-extrabold text-white text-outfit">{aiPredict.aiFreshnessScore}%</span>
-                    <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Freshness</span>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 border-t border-b border-white/5 py-4 my-2 text-left">
-                  <div className="flex flex-col">
-                    <span className="text-slate-400 text-[10px] uppercase font-bold">Safe window</span>
-                    <span className="text-base font-bold text-white mt-0.5">{aiPredict.aiSafeWindowHours} Hours</span>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-slate-400 text-[10px] uppercase font-bold">Risk Code</span>
-                    <span className={`text-xs font-bold uppercase mt-1 w-fit px-1.5 py-0.5 rounded ${
-                      aiPredict.aiRiskLevel === 'danger' ? 'bg-red-500/10 text-red-400' :
-                      aiPredict.aiRiskLevel === 'warning' ? 'bg-amber-500/10 text-amber-400' : 'bg-brand-500/10 text-brand-500'
-                    }`}>
-                      {aiPredict.aiRiskLevel}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="bg-white/5 border border-white/5 p-4 rounded-xl text-xs text-left leading-relaxed text-slate-300">
-                  <strong>AI Storage Recommendation:</strong> <br />
-                  <span className="text-slate-400 block mt-1">{aiPredict.aiRecommendation}</span>
-                </div>
-
-              </div>
-            ) : (
-              <div className="py-20 text-center flex flex-col items-center justify-center gap-3">
-                <ShieldCheck className="h-10 w-10 text-slate-500" />
-                <span className="text-xs text-slate-500">Provide preparation & expiry values to evaluate freshness indexes.</span>
-              </div>
-            )}
-
-          </div>
-        </div>
-
       </div>
 
       {/* Custom Expiry picker modal with OK confirmation */}

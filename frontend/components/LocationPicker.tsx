@@ -10,10 +10,6 @@ interface LocationPickerProps {
   onChange: (data: { address: string; coordinates: [number, number] }) => void;
 }
 
-// ─── Fixed Permanent Location ────────────────────────────────────────────────
-const FIXED_COORDS = { lat: 13.028344, lng: 80.016108 };
-const FIXED_ADDRESS_DEFAULT = "Saveetha College of Architecture and Design (SCAD), Thandalam, Sriperumbudur, Tamil Nadu, India";
-
 // India bounding box (conservative)
 const INDIA_BOUNDS = { latMin: 6.5, latMax: 37.1, lngMin: 68.1, lngMax: 97.4 };
 
@@ -168,6 +164,44 @@ export default function LocationPicker({
   const [locationConfirmed, setLocationConfirmed] = useState(false);
   const [gpsTriggered, setGpsTriggered] = useState(false);
   const geocodeRequestRef = useRef(0);
+  const watchIdRef = useRef<number | null>(null);
+  const watchTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const stopWatcher = () => {
+    if (watchIdRef.current !== null && typeof navigator !== 'undefined' && navigator.geolocation) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+    }
+    if (watchTimerRef.current !== null) {
+      clearTimeout(watchTimerRef.current);
+      watchTimerRef.current = null;
+    }
+  };
+
+  const reverseGeocode = async (lat: number, lng: number) => {
+    const requestId = ++geocodeRequestRef.current;
+    setGeocoding(true);
+    setGeocodingError(null);
+
+    try {
+      const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=jsonv2&addressdetails=1`;
+      const res = await fetch(url, { headers: NOM_HEADERS });
+      if (res.ok && requestId === geocodeRequestRef.current) {
+        const data = await res.json();
+        const formatted = formatNominatimAddress(data.address) || data.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+        setAddress(formatted);
+        setSearchQuery(formatted);
+        setLocationConfirmed(true);
+        onChange({ address: formatted, coordinates: [lng, lat] });
+      }
+    } catch (err) {
+      console.error('[LocationPicker] Reverse geocode error:', err);
+    } finally {
+      if (requestId === geocodeRequestRef.current) {
+        setGeocoding(false);
+      }
+    }
+  };
 
   // ── Sync searchQuery when address changes (e.g. after reverse geocode) ───────
   useEffect(() => {
@@ -314,6 +348,7 @@ export default function LocationPicker({
 
     return () => {
       active = false;
+      stopWatcher();
       if (leafletMapRef.current) {
         leafletMapRef.current.remove();
         leafletMapRef.current = null;
@@ -324,74 +359,8 @@ export default function LocationPicker({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Auto-trigger GPS on mount if no real initial coordinates ─────────────────
-  useEffect(() => {
-    if (!hasInitialCoords && !gpsTriggered && leafletLoaded) {
-      setGpsTriggered(true);
-      handleUseCurrentLocation();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [leafletLoaded]);
-
-  // ── Reverse geocode: lat/lng → address string ─────────────────────────────────
-  const reverseGeocode = async (lat: number, lng: number, requestId?: number) => {
-    setGeocoding(true);
-    setGeocodingError(null);
-    const thisId = requestId ?? ++geocodeRequestRef.current;
-
-    try {
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&addressdetails=1`,
-        { headers: NOM_HEADERS }
-      );
-
-      if (thisId < geocodeRequestRef.current) return;
-
-      if (res.ok) {
-        const data = await res.json();
-        if (data && data.address) {
-          // Validate the returned location is within India
-          if (!isWithinIndia(lat, lng)) {
-            setGeocodingError('The selected location is outside India. Please select a location within India.');
-            setGeocoding(false);
-            return;
-          }
-
-          const formatted = formatNominatimAddress(data.address) || data.display_name;
-          setAddress(formatted);
-          setSearchQuery(formatted);
-          setLocationConfirmed(true);
-          onChange({ address: formatted, coordinates: [lng, lat] });
-          return;
-        }
-      }
-
-      // Fallback: show raw coordinates if geocode failed
-      const coordStr = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-      setAddress(coordStr);
-      setSearchQuery(coordStr);
-      setLocationConfirmed(true);
-      onChange({ address: coordStr, coordinates: [lng, lat] });
-      setGeocodingError('Could not resolve address. Coordinates saved — please verify the pin is correct.');
-    } catch (err) {
-      if (thisId < geocodeRequestRef.current) return;
-      console.error('[LocationPicker] Reverse geocode failed:', err);
-      const coordStr = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-      setAddress(coordStr);
-      setSearchQuery(coordStr);
-      setLocationConfirmed(true);
-      onChange({ address: coordStr, coordinates: [lng, lat] });
-      setGeocodingError('Unable to resolve address. Please check your network connection.');
-    } finally {
-      if (thisId >= geocodeRequestRef.current) setGeocoding(false);
-    }
-  };
-
-  // ── "Use My Current Location": Uses FIXED Project Coordinates (1-click, no device GPS) ──
-  const handleUseCurrentLocation = () => {
-    const lat = FIXED_COORDS.lat;
-    const lng = FIXED_COORDS.lng;
-
+  // ── Helper: apply valid accepted position coordinates ────────────────────
+  const applyAcceptedLocation = async (lat: number, lng: number) => {
     const map = leafletMapRef.current;
     const marker = leafletMarkerRef.current;
     if (map && marker) {
@@ -400,16 +369,81 @@ export default function LocationPicker({
       marker.setLatLng([lat, lng]);
     }
 
-    setLocationStatus('Location selected');
-    setTimeout(() => setLocationStatus(null), 3000);
+    setLocationStatus('Resolving location address...');
+    await reverseGeocode(lat, lng);
+    setLocationStatus('📍 Current Location Detected');
+    setGeocoding(false);
+    setTimeout(() => setLocationStatus(null), 4000);
+  };
 
-    // Set fixed location immediately
-    const fixedAddr = FIXED_ADDRESS_DEFAULT;
-    setAddress(fixedAddr);
-    setSearchQuery(fixedAddr);
-    setLocationConfirmed(true);
+  // ── "Use My Current Location": Use browser native Geolocation API ──────────
+  const handleUseCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      setGeocodingError('Browser Geolocation API is not supported on this browser.');
+      return;
+    }
+
+    stopWatcher();
+    setGeocoding(true);
     setGeocodingError(null);
-    onChange({ address: fixedAddr, coordinates: [lng, lat] });
+    setLocationStatus('Detecting your current location...');
+
+    let bestPosition: { lat: number; lng: number; accuracy: number; timestamp: number } | null = null;
+
+    // Set bounded timer for up to 15 seconds to wait for GPS refinement
+    watchTimerRef.current = setTimeout(() => {
+      stopWatcher();
+      if (bestPosition && bestPosition.accuracy <= 250) {
+        applyAcceptedLocation(bestPosition.lat, bestPosition.lng);
+      } else {
+        setGeocoding(false);
+        setLocationStatus(null);
+        setGeocodingError(
+          'Could not acquire precise GPS signal. Please ensure location/GPS services are enabled on your device with clear reception, and try again.'
+        );
+      }
+    }, 15000);
+
+    const watchId = navigator.geolocation.watchPosition(
+      async (position) => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        const accuracy = position.coords.accuracy || 100;
+        const timestamp = position.timestamp || Date.now();
+
+        console.log(`[LOCATION DEBUG] Lat: ${lat}, Lng: ${lng}, Accuracy: ${accuracy}m, Timestamp: ${new Date(timestamp).toISOString()}, Provider: browser.geolocation`);
+
+        if (!bestPosition || accuracy < bestPosition.accuracy) {
+          bestPosition = { lat, lng, accuracy, timestamp };
+        }
+
+        // Validate accuracy threshold (target <= 250m)
+        if (accuracy <= 250) {
+          stopWatcher();
+          applyAcceptedLocation(lat, lng);
+        } else {
+          // Coarse/IP location returned on first reading — keep refining position
+          setLocationStatus(`Refining location accuracy (${Math.round(accuracy)}m)...`);
+        }
+      },
+      (error) => {
+        stopWatcher();
+        setGeocoding(false);
+        setLocationStatus(null);
+        let errorMsg = 'Unable to detect your current location. Please check your device location settings.';
+        if (error.code === error.PERMISSION_DENIED) {
+          errorMsg = 'Location permission was denied. Please allow location access in your browser settings to detect your location.';
+        } else if (error.code === error.POSITION_UNAVAILABLE) {
+          errorMsg = 'Location services are disabled or unavailable. Please enable Precise Location on your device.';
+        } else if (error.code === error.TIMEOUT) {
+          errorMsg = 'Location detection timed out. Please check your GPS signal and try again.';
+        }
+        setGeocodingError(errorMsg);
+      },
+      { enableHighAccuracy: true, timeout: 25000, maximumAge: 0 }
+    );
+
+    watchIdRef.current = watchId;
   };
 
   // ── Select a Nominatim suggestion from dropdown ───────────────────────────────
@@ -530,27 +564,11 @@ export default function LocationPicker({
           <button
             type="button"
             onClick={handleUseCurrentLocation}
-            className="bg-dark-900/90 border border-white/10 hover:bg-dark-900 text-brand-500 p-2.5 rounded-lg flex items-center justify-center gap-1.5 shadow-lg transition-all text-xs font-bold"
+            className="bg-dark-900/90 border border-brand-500/40 hover:bg-dark-900 text-brand-400 p-2.5 rounded-lg flex items-center justify-center gap-1.5 shadow-lg transition-all text-xs font-bold"
           >
-            <Compass className="h-4 w-4" />
+            <Compass className="h-4 w-4 text-brand-400" />
             <span>Use My Current Location</span>
           </button>
-
-          {/* Navigate to Google Maps Button */}
-          {hasInitialCoords || locationConfirmed ? (
-            <a
-              href={`https://www.google.com/maps/search/?api=1&query=${initialCoordinates && (initialCoordinates[0] !== 0 || initialCoordinates[1] !== 0)
-                  ? `${initialCoordinates[1]},${initialCoordinates[0]}`
-                  : `${FIXED_COORDS.lat},${FIXED_COORDS.lng}`
-                }`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="bg-dark-900/90 border border-brand-500/30 hover:bg-dark-900 text-brand-400 p-2.5 rounded-lg flex items-center justify-center gap-1.5 shadow-lg transition-all text-xs font-bold"
-            >
-              <Navigation className="h-4 w-4" />
-              <span>Navigate to Google Maps</span>
-            </a>
-          ) : null}
         </div>
       </div>
 

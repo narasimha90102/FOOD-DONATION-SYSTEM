@@ -9,4 +9,16 @@ export const notificationApi = {
     const res = await apiClient.put(`/notifications/${id}/read`);
     return res.data;
   },
+  markAllRead: async () => {
+    const res = await apiClient.put('/notifications/mark-all-read');
+    return res.data;
+  },
+  delete: async (id: string) => {
+    const res = await apiClient.delete(`/notifications/${id}`);
+    return res.data;
+  },
+  deleteAll: async () => {
+    const res = await apiClient.delete('/notifications');
+    return res.data;
+  },
 };

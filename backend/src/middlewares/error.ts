@@ -41,11 +41,13 @@ export const errorHandler = (
   }
 
   const statusCode = error.statusCode || err.statusCode || 500;
-  const message = err.message || error.message || 'Internal Server Error';
+  const message = err.message || error.message || 'Unable to complete request.';
+  const errorCode = error.code || err.code || (statusCode === 503 ? 'SERVICE_UNAVAILABLE' : 'SERVER_ERROR');
 
+  res.setHeader('Content-Type', 'application/json');
   res.status(statusCode).json({
     success: false,
     message,
-    stack: err.stack,
+    error: errorCode,
   });
 };

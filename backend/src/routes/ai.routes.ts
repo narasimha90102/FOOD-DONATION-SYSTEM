@@ -1,10 +1,15 @@
 import { Router } from 'express';
-import { predictFreshness, checkAIStatus } from '../controllers/ai.controller';
-import { protect } from '../middlewares/auth';
+import { getAIHealth, getAIStatus, predictFreshness } from '../controllers/ai.controller';
+import { handleFoodAIChat, getFoodAIHealth } from '../controllers/foodAI.controller';
+import { optionalAuth } from '../middlewares/auth';
 
 const router = Router();
 
-router.post('/predict', protect, predictFreshness);
-router.get('/status', protect, checkAIStatus);
+router.get('/health', getFoodAIHealth);
+router.get('/status', getAIStatus);
+router.post('/predict', predictFreshness);
+router.post('/analyze', predictFreshness);
+router.post('/chat', optionalAuth, handleFoodAIChat);
+router.post('/food-ai-chat', optionalAuth, handleFoodAIChat);
 
 export default router;

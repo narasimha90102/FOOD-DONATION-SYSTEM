@@ -138,6 +138,18 @@ const DonationSchema = new Schema<IDonation>(
       remainingQuantity: { type: Number },
       notes: { type: String },
     },
+    deliveredAt: {
+      type: Date,
+    },
+    deliveredBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    deliveryStatus: {
+      type: String,
+      enum: ['PENDING', 'IN_PROGRESS', 'DELIVERED'],
+      default: 'PENDING',
+    },
     cancelledBy: {
       type: Schema.Types.ObjectId,
       ref: 'User',

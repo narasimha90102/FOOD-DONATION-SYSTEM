@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../middlewares/auth';
 import { Notification } from '../models/Notification';
+import { SocketService } from '../services/socket.service';
 
 /**
  * @desc    Get user notifications (paginated, sorted by latest)
@@ -10,7 +11,7 @@ import { Notification } from '../models/Notification';
 export const getNotifications = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 20;
+    const limit = parseInt(req.query.limit as string) || 50;
     const skip = (page - 1) * limit;
 
     const query = { recipient: req.user?._id };
@@ -55,6 +56,9 @@ export const markAsRead = async (req: AuthRequest, res: Response, next: NextFunc
     notification.read = true;
     await notification.save();
 
+    // Emit real-time sync event to all sessions of this user
+    SocketService.emitNotificationRead(req.user?._id.toString(), notification._id.toString());
+
     res.status(200).json({
       success: true,
       message: 'Notification marked as read.',
@@ -75,6 +79,9 @@ export const markAllAsRead = async (req: AuthRequest, res: Response, next: NextF
     const query = { recipient: req.user?._id, read: false };
 
     await Notification.updateMany(query, { $set: { read: true } });
+
+    // Emit real-time sync event to all sessions of this user
+    SocketService.emitNotificationRead(req.user?._id.toString());
 
     res.status(200).json({
       success: true,
@@ -102,11 +109,18 @@ export const deleteNotification = async (req: AuthRequest, res: Response, next: 
       return res.status(403).json({ success: false, message: 'Unauthorized to delete this notification.' });
     }
 
+    const notificationId = notification._id.toString();
+    const recipientId = req.user?._id.toString();
+
     await notification.deleteOne();
+
+    // Emit real-time deletion event to all connected clients (Web + Mobile)
+    SocketService.emitNotificationDeleted(recipientId, notificationId);
 
     res.status(200).json({
       success: true,
       message: 'Notification deleted.',
+      notificationId,
     });
   } catch (error) {
     next(error);
@@ -124,6 +138,9 @@ export const deleteAllNotifications = async (req: AuthRequest, res: Response, ne
 
     await Notification.deleteMany(query);
 
+    // Emit real-time clear event to all sessions of this user
+    SocketService.emitNotificationCleared(req.user?._id.toString());
+
     res.status(200).json({
       success: true,
       message: 'All notifications deleted.',
@@ -132,3 +149,4 @@ export const deleteAllNotifications = async (req: AuthRequest, res: Response, ne
     next(error);
   }
 };
+

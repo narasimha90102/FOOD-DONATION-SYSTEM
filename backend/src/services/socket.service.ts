@@ -16,10 +16,11 @@ export class SocketService {
   public static initialize(server: HttpServer): Server {
     this.io = new Server(server, {
       cors: {
-        origin: env.FRONTEND_URL,
-        methods: ['GET', 'POST'],
-        credentials: true,
+        origin: '*', // Allow all origins — web, mobile app, Expo, Android APK
+        methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+        credentials: false,
       },
+      transports: ['websocket', 'polling'],
     });
 
     this.io.on('connection', (socket: Socket) => {
@@ -56,8 +57,9 @@ export class SocketService {
         const { donationId, coordinates } = data;
         if (!donationId || !coordinates) return;
 
-        // Broadcast updates to clients tracking this donation
+        // Broadcast dual updates to clients tracking this donation
         socket.broadcast.emit('volunteer_location_changed', { donationId, coordinates });
+        socket.broadcast.emit('volunteer:locationUpdated', { donationId, coordinates });
         
         // Update volunteer user's location in the database
         try {
@@ -102,7 +104,7 @@ export class SocketService {
   }
 
   /**
-   * Emits a real-time message to a specific chat room.
+   * Emits a real-time message to a specific room.
    */
   public static emitToRoom(room: string, event: string, payload: any): void {
     if (this.io) {
@@ -111,7 +113,7 @@ export class SocketService {
   }
 
   /**
-   * Broadcasts a real-time message to only targeted relevant connected clients.
+   * Broadcasts a real-time event to all targeted relevant connected clients (with dual-event support).
    */
   public static async broadcast(event: string, payload: any): Promise<void> {
     if (!this.io) return;
@@ -121,9 +123,9 @@ export class SocketService {
 
       // Extract coordinates & status if payload is a Donation object
       if (payload && payload._id) {
-        if (payload.donor) affectedUserIds.add(payload.donor.toString());
-        if (payload.ngo) affectedUserIds.add(payload.ngo.toString());
-        if (payload.volunteer) affectedUserIds.add(payload.volunteer.toString());
+        if (payload.donor) affectedUserIds.add((payload.donor._id || payload.donor).toString());
+        if (payload.ngo) affectedUserIds.add((payload.ngo._id || payload.ngo).toString());
+        if (payload.volunteer) affectedUserIds.add((payload.volunteer._id || payload.volunteer).toString());
 
         // Find Admins to include them
         const admins = await User.find({ role: 'ADMIN' });
@@ -131,33 +133,39 @@ export class SocketService {
           affectedUserIds.add(admin._id.toString());
         }
 
-        // If PENDING, find nearby NGOs (within 15km) to include them
-        if (payload.status === 'PENDING' && payload.location?.coordinates) {
-          const [donLng, donLat] = payload.location.coordinates;
+        // If PENDING or new donation, include all active NGOs
+        if (payload.status === 'PENDING') {
           const ngos = await User.find({ role: 'NGO', isBlocked: false, approvalStatus: 'approved' });
           for (const ngo of ngos) {
-            if (ngo.location?.coordinates) {
-              const [ngoLng, ngoLat] = ngo.location.coordinates;
-              const distance = LocationService.calculateDistance(donLat, donLng, ngoLat, ngoLng);
-              if (distance <= 15) {
-                affectedUserIds.add(ngo._id.toString());
-              }
-            }
+            affectedUserIds.add(ngo._id.toString());
           }
         }
       }
 
-      // If we could not resolve any affected users, fallback to global emit for compatibility
+      // Compute canonical dual event names
+      const eventsToEmit = [event];
+      if (event === 'donation_created') eventsToEmit.push('donation:created');
+      if (event === 'donation_updated') eventsToEmit.push('donation:updated', 'donation:statusChanged');
+      if (event === 'donation_cancelled') eventsToEmit.push('donation:cancelled');
+
+      // If no specific users isolated, broadcast globally to all sockets
       if (affectedUserIds.size === 0) {
-        this.io.emit(event, payload);
+        for (const ev of eventsToEmit) {
+          this.io.emit(ev, payload);
+        }
         return;
       }
 
-      // Emit to private user rooms only
+      // Emit to targeted private user rooms AND broadcast event to ensure complete sync
       for (const userId of affectedUserIds) {
-        this.io.to(userId).emit(event, payload);
+        for (const ev of eventsToEmit) {
+          this.io.to(userId).emit(ev, payload);
+        }
       }
-      console.log(`[Socket] Target-emitted event ${event} to ${affectedUserIds.size} relevant users.`);
+      for (const ev of eventsToEmit) {
+        this.io.emit(ev, payload);
+      }
+      console.log(`[Socket] Synchronized event [${eventsToEmit.join(', ')}] across clients.`);
     } catch (err) {
       console.error('[Socket] Targeted broadcast failed, fallback to global emit:', err);
       this.io.emit(event, payload);
@@ -165,7 +173,7 @@ export class SocketService {
   }
 
   /**
-   * Pushes a database notification to a specific user and logs it in the database.
+   * Pushes a database notification to a specific user and emits in real-time.
    */
   public static async sendSystemNotification(
     recipientId: string,
@@ -210,10 +218,42 @@ export class SocketService {
 
       if (this.io) {
         this.io.to(recipientId).emit('new_notification', notification);
+        this.io.to(recipientId).emit('notification:created', notification);
         console.log(`[Socket] Emitted new_notification to user ${recipientId}`);
       }
     } catch (err) {
       console.error('[Notification] Failed to create or emit notification:', err);
+    }
+  }
+
+  /**
+   * Real-time notification deletion sync.
+   */
+  public static emitNotificationDeleted(recipientId: string, notificationId: string): void {
+    if (this.io) {
+      this.io.to(recipientId).emit('notification_deleted', { notificationId });
+      this.io.to(recipientId).emit('notification:deleted', { notificationId });
+      console.log(`[Socket] Emitted notification_deleted for ${notificationId} to user ${recipientId}`);
+    }
+  }
+
+  /**
+   * Real-time notification read sync.
+   */
+  public static emitNotificationRead(recipientId: string, notificationId?: string): void {
+    if (this.io) {
+      this.io.to(recipientId).emit('notification_read', { notificationId });
+      this.io.to(recipientId).emit('notification:read', { notificationId });
+    }
+  }
+
+  /**
+   * Real-time notification cleared sync.
+   */
+  public static emitNotificationCleared(recipientId: string): void {
+    if (this.io) {
+      this.io.to(recipientId).emit('notification_cleared', { recipientId });
+      this.io.to(recipientId).emit('notification:cleared', { recipientId });
     }
   }
 
@@ -224,3 +264,4 @@ export class SocketService {
     return this.userSockets.has(userId) && (this.userSockets.get(userId)?.size || 0) > 0;
   }
 }
+

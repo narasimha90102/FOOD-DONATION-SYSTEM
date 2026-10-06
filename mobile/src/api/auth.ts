@@ -29,7 +29,11 @@ export const authApi = {
     return res.data;
   },
   updateProfile: async (data: any) => {
-    const res = await apiClient.put('/auth/profile', data);
+    const res = await apiClient.put('/auth/update', data);
+    return res.data;
+  },
+  deleteAccount: async () => {
+    const res = await apiClient.delete('/auth/delete-account');
     return res.data;
   },
 };

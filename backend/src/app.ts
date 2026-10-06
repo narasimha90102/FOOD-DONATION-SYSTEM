@@ -10,8 +10,9 @@ import authRoutes from './routes/auth.routes';
 import donationRoutes from './routes/donation.routes';
 import chatRoutes from './routes/chat.routes';
 import adminRoutes from './routes/admin.routes';
-import aiRoutes from './routes/ai.routes';
 import notificationRoutes from './routes/notification.routes';
+import aiRoutes from './routes/ai.routes';
+import foodAIRoutes from './routes/foodAI.routes';
 
 const app = express();
 
@@ -22,6 +23,7 @@ app.use(helmet());
 const allowedOrigins = [
   env.FRONTEND_URL,
   'https://foodbridge-donation.vercel.app',
+  'https://food-donation-system-delta.vercel.app/',
   'http://localhost:3003',
   'http://localhost:3000',
   'http://127.0.0.1:3003',
@@ -32,11 +34,11 @@ app.use(
     origin: (origin, callback) => {
       // Allow requests with no origin (mobile apps, curl, Postman)
       if (!origin) return callback(null, true);
-      
-      const isAllowed = allowedOrigins.includes(origin) || 
-                        origin.endsWith('.vercel.app') || 
-                        env.NODE_ENV === 'development';
-                        
+
+      const isAllowed = allowedOrigins.includes(origin) ||
+        origin.endsWith('.vercel.app') ||
+        env.NODE_ENV === 'development';
+
       if (isAllowed) {
         return callback(null, true);
       }
@@ -72,8 +74,9 @@ app.use('/api/auth', authRoutes);
 app.use('/api/donations', donationRoutes);
 app.use('/api/chats', chatRoutes);
 app.use('/api/admin', adminRoutes);
-app.use('/api/ai', aiRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/ai', aiRoutes);
+app.use('/api/food-ai', foodAIRoutes);
 
 // Catch-all 404 Route handler
 app.use((req, res, next) => {

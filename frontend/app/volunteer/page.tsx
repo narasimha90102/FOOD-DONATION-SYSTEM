@@ -6,9 +6,19 @@ import { ApiService } from '../../services/api';
 import { useAppStore } from '../../store/useAppStore';
 import { useSocket } from '../../hooks/useSocket';
 import { Compass, MapPin, Navigation, RefreshCw, CheckCircle2, Truck, Clock, Award, Star, MessageSquare, ShieldCheck, AlertTriangle, XCircle } from 'lucide-react';
-import ActiveTrackingMap from '../../components/ActiveTrackingMap';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { formatDateOnly, formatISTDateTime } from '../../utils/formatDate';
+
+const ActiveTrackingMap = dynamic(() => import('../../components/ActiveTrackingMap'), {
+  ssr: false,
+  loading: () => (
+    <div className="h-80 w-full bg-dark-900/60 rounded-xl border border-white/10 flex items-center justify-center text-slate-400 text-xs gap-2">
+      <RefreshCw className="h-4 w-4 animate-spin text-brand-500" />
+      <span>Loading Interactive Road Map...</span>
+    </div>
+  ),
+});
 
 interface DonationItem {
   _id: string;
@@ -22,6 +32,7 @@ interface DonationItem {
   status: string;
   createdAt: string;
   distance?: number;
+  pickupToNgoDistance?: number;
   aiSafeWindowHours?: number;
   aiRiskLevel?: string;
   location?: {
@@ -77,6 +88,35 @@ export default function VolunteerDashboard() {
   const [selectedTaskIdForCancel, setSelectedTaskIdForCancel] = useState<string | null>(null);
   const [cancelReason, setCancelReason] = useState('');
   const [cancelPhoto, setCancelPhoto] = useState('');
+
+  // Delivery Confirmation Modal states
+  const [showDeliverModal, setShowDeliverModal] = useState(false);
+  const [selectedTaskIdForDeliver, setSelectedTaskIdForDeliver] = useState<string | null>(null);
+  const [selectedTaskFoodName, setSelectedTaskFoodName] = useState<string | null>(null);
+  const [selectedTaskNgoName, setSelectedTaskNgoName] = useState<string | null>(null);
+
+  const submitVolunteerDelivered = async () => {
+    if (!selectedTaskIdForDeliver) return;
+
+    try {
+      setActionLoading(selectedTaskIdForDeliver);
+      await ApiService.put(`/donations/${selectedTaskIdForDeliver}/status`, {
+        status: 'DELIVERED',
+      });
+
+      setShowDeliverModal(false);
+      setSelectedTaskIdForDeliver(null);
+      setSelectedTaskFoodName(null);
+      setSelectedTaskNgoName(null);
+
+      await fetchVolunteerData();
+      setActiveTab('history');
+    } catch (err: any) {
+      alert(err.message || 'Error updating delivery status.');
+    } finally {
+      setActionLoading(null);
+    }
+  };
 
   const submitVolunteerCancellation = async () => {
     if (!selectedTaskIdForCancel || !cancelReason.trim() || !cancelPhoto) {
@@ -141,8 +181,11 @@ export default function VolunteerDashboard() {
         setVolCoords(newCoords);
         setGpsError(null);
 
-        // Emit update to backend/socket
+        // Emit update to backend/socket and save location to volunteer profile
         emitLocationUpdate(activeTask._id, newCoords);
+        if (user && user.role === 'VOLUNTEER') {
+          ApiService.put('/auth/profile', { coordinates: newCoords }).catch(() => {});
+        }
       },
       (error) => {
         console.warn("GPS tracking error:", error);
@@ -159,13 +202,18 @@ export default function VolunteerDashboard() {
       console.log('[VolunteerDashboard] Stopping device GPS watcher...');
       navigator.geolocation.clearWatch(watchId);
     };
-  }, [mounted, activeTasks]);
+  }, [mounted, activeTasks, user]);
 
   const fetchVolunteerData = async () => {
     try {
       setRefreshing(true);
-      // Fetch all donations
-      const res = await ApiService.get('/donations');
+      // Determine volunteer coordinates from live state or user profile
+      let vLng = volCoords ? volCoords[0] : (user?.location?.coordinates?.[0] || 0);
+      let vLat = volCoords ? volCoords[1] : (user?.location?.coordinates?.[1] || 0);
+
+      // Fetch donations passing coordinates if known
+      const queryStr = (vLng !== 0 || vLat !== 0) ? `?longitude=${vLng}&latitude=${vLat}` : '';
+      const res = await ApiService.get('/donations' + queryStr);
       const allDonations: DonationItem[] = res.donations || [];
 
       // Available: NGO_ACCEPTED and no volunteer assigned yet
@@ -202,25 +250,27 @@ export default function VolunteerDashboard() {
         return parseFloat((R * c).toFixed(1));
       };
 
-      // Calculate actual distance or stable fallback (never random)
+      // Calculate actual geographic distance (Volunteer ↔ Pickup & Pickup ↔ NGO)
       const enrichDistance = (items: DonationItem[]) => {
         return items.map(item => {
-          if (item.distance !== undefined && item.distance !== null && item.distance !== -1) {
-            return item;
+          const [donLng, donLat] = item.location?.coordinates || [0, 0];
+
+          // Compute Distance 1: Volunteer Location ↔ Pickup Location (in KM)
+          if ((vLng !== 0 || vLat !== 0) && (donLng !== 0 || donLat !== 0)) {
+            item.distance = calculateHaversine(vLat, vLng, donLat, donLng);
+          } else if (item.distance === undefined || item.distance === null) {
+            item.distance = -1;
           }
-          
-          if (user?.location?.coordinates && item.location?.coordinates) {
-            const [userLng, userLat] = user.location.coordinates;
-            const [donLng, donLat] = item.location.coordinates;
-            if (userLng !== 0 || userLat !== 0) {
-              item.distance = calculateHaversine(userLat, userLng, donLat, donLng);
-              return item;
+
+          // Compute Distance 2: Pickup Location ↔ NGO Location (in KM)
+          const ngoCoords = item.destinationLocation?.coordinates || item.ngo?.location?.coordinates;
+          if (ngoCoords && Array.isArray(ngoCoords) && ngoCoords.length === 2) {
+            const [ngoLng, ngoLat] = ngoCoords;
+            if ((ngoLng !== 0 || ngoLat !== 0) && (donLng !== 0 || donLat !== 0)) {
+              item.pickupToNgoDistance = calculateHaversine(donLat, donLng, ngoLat, ngoLng);
             }
           }
 
-          // Stable fallback hash so distance doesn't fluctuate on refresh
-          const idHash = item._id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-          item.distance = parseFloat(((idHash % 80) / 10 + 1.2).toFixed(1));
           return item;
         });
       };
@@ -240,8 +290,18 @@ export default function VolunteerDashboard() {
   useEffect(() => {
     if (mounted && isAuthenticated && user) {
       fetchVolunteerData();
+
+      const handleUpdate = () => {
+        fetchVolunteerData();
+      };
+
+      window.addEventListener('donation_update', handleUpdate);
+      return () => {
+        window.removeEventListener('donation_update', handleUpdate);
+      };
     }
   }, [mounted, isAuthenticated, user]);
+
 
   const handleClaimPickup = async (donationId: string) => {
     try {
@@ -419,7 +479,7 @@ export default function VolunteerDashboard() {
                   <div key={item._id} className="glass-panel p-6 border-white/5 flex flex-col justify-between gap-5 glass-panel-hover relative overflow-hidden">
                     {/* Distance Badge */}
                     <div className="absolute top-3 right-3 bg-brand-500/10 border border-brand-500/20 text-brand-500 text-[10px] font-bold px-2 py-0.5 rounded">
-                      {item.distance} KM away
+                      {item.distance !== -1 ? `📏 ${item.distance} km away` : '📍 Location pending'}
                     </div>
 
                     <div className="space-y-3">
@@ -435,7 +495,11 @@ export default function VolunteerDashboard() {
                         </div>
                         <div className="flex items-center gap-1.5">
                           <Navigation className="h-3.5 w-3.5 text-slate-500 shrink-0" />
-                          <span className="truncate"><strong>To NGO:</strong> {item.ngo?.name || 'Assigned NGO'}</span>
+                          <span className="truncate"><strong>To NGO:</strong> {item.ngo?.name || 'Assigned NGO'} ({item.destinationAddress || item.ngo?.address})</span>
+                        </div>
+                        <div className="flex items-center justify-between text-[11px] pt-1 text-slate-400">
+                          <span>📏 <strong>Vol → Pickup:</strong> {item.distance !== -1 ? `${item.distance} km` : 'Enable location'}</span>
+                          <span>🏢 <strong>Pickup → NGO:</strong> {item.pickupToNgoDistance && item.pickupToNgoDistance !== -1 ? `${item.pickupToNgoDistance} km` : 'Pending'}</span>
                         </div>
                         <div className="flex items-center gap-1.5">
                           <Clock className="h-3.5 w-3.5 text-slate-500 shrink-0" />
@@ -639,11 +703,16 @@ export default function VolunteerDashboard() {
 
                         {item.status === 'IN_TRANSIT' && (
                           <button
-                            onClick={() => handleUpdateStatus(item._id, 'DELIVERED')}
+                            onClick={() => {
+                              setSelectedTaskIdForDeliver(item._id);
+                              setSelectedTaskFoodName(item.foodName);
+                              setSelectedTaskNgoName(item.ngo?.name || 'NGO');
+                              setShowDeliverModal(true);
+                            }}
                             disabled={actionLoading === item._id}
-                            className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-dark-900 font-bold py-3.5 rounded-xl text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-lg"
+                            className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-dark-900 font-bold py-3.5 rounded-xl text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-500/10 transition-all cursor-pointer"
                           >
-                            <CheckCircle2 className="h-4 w-4" /> Complete Delivery
+                            <CheckCircle2 className="h-4 w-4" /> Delivered
                           </button>
                         )}
 
@@ -689,108 +758,6 @@ export default function VolunteerDashboard() {
                           />
                         )}
 
-                        {gpsError && (
-                          <div className="bg-amber-500/10 border border-amber-500/25 p-3 rounded-lg text-[10px] text-amber-400 leading-normal flex items-start gap-1.5 animate-pulse">
-                            <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
-                            <span>{gpsError}</span>
-                          </div>
-                        )}
-
-                        {/* Two separate Google Maps Navigation Buttons */}
-                        {(() => {
-                          const pickupCoords = item.location?.coordinates; // [lng, lat]
-                          const ngoDestCoords = item.destinationLocation?.coordinates || item.ngo?.location?.coordinates; // [lng, lat]
-                          const pickupAddr = item.pickupAddress;
-                          const ngoAddr = item.destinationAddress || item.ngo?.address || '';
-
-                          // Build pickup destination string for Google Maps (lat,lng)
-                          const pickupDest = pickupCoords
-                            ? `${pickupCoords[1]},${pickupCoords[0]}`
-                            : encodeURIComponent(pickupAddr);
-
-                          // Build NGO destination string for Google Maps (lat,lng)
-                          const ngoDest = ngoDestCoords
-                            ? `${ngoDestCoords[1]},${ngoDestCoords[0]}`
-                            : encodeURIComponent(ngoAddr);
-
-                          // Leg 1 click handler: ask device GPS fresh right now, then open Maps
-                          const handleLeg1Nav = () => {
-                            if (!navigator.geolocation) {
-                              // Fallback: open Google Maps without origin (Maps will ask)
-                              window.open(`https://www.google.com/maps/dir/?api=1&destination=${pickupDest}&travelmode=driving`, '_blank');
-                              return;
-                            }
-                            setNavLoading(`${item._id}-leg1`);
-                            navigator.geolocation.getCurrentPosition(
-                              (pos) => {
-                                setNavLoading(null);
-                                const originLat = pos.coords.latitude;
-                                const originLng = pos.coords.longitude;
-                                // Use path format: /maps/dir/originLat,originLng/destLat,destLng
-                                const url = `https://www.google.com/maps/dir/${originLat},${originLng}/${pickupDest}`;
-                                window.open(url, '_blank');
-                              },
-                              () => {
-                                setNavLoading(null);
-                                // GPS denied or failed — let Google Maps ask for location itself
-                                window.open(`https://www.google.com/maps/dir/?api=1&destination=${pickupDest}&travelmode=driving`, '_blank');
-                              },
-                              { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-                            );
-                          };
-
-                          // Leg 2: Pickup → NGO — both coords fixed, no GPS needed
-                          const leg2Url = `https://www.google.com/maps/dir/${pickupDest}/${ngoDest}`;
-
-                          const isLeg1Loading = navLoading === `${item._id}-leg1`;
-
-                          return (
-                            <div className="flex flex-col gap-2 pt-1 border-t border-white/5">
-                              <span className="text-[9px] text-slate-500 uppercase font-bold tracking-widest">Open in Google Maps</span>
-
-                              {/* Button 1: Current Location → Pickup (GPS fetched at click) */}
-                              <button
-                                type="button"
-                                onClick={handleLeg1Nav}
-                                disabled={isLeg1Loading}
-                                className="w-full bg-amber-500/10 hover:bg-amber-500/20 disabled:opacity-60 border border-amber-500/30 text-amber-400 font-bold py-3 rounded-xl text-xs transition-all flex items-center gap-3 px-4 shadow"
-                              >
-                                <div className="flex items-center justify-center w-7 h-7 rounded-full bg-amber-500/20 shrink-0">
-                                  {isLeg1Loading
-                                    ? <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                                    : <Navigation className="h-3.5 w-3.5" />
-                                  }
-                                </div>
-                                <div className="flex flex-col text-left">
-                                  <span className="font-bold text-white">
-                                    {isLeg1Loading ? 'Getting your location...' : '📍 Current Location → 📦 Pickup'}
-                                  </span>
-                                  <span className="text-[9px] text-amber-500/60 font-normal mt-0.5">
-                                    {isLeg1Loading ? 'Please allow location permission' : 'Fetches your GPS now · opens Google Maps'}
-                                  </span>
-                                </div>
-                              </button>
-
-                              {/* Button 2: Pickup → NGO Destination (fixed coords, no GPS needed) */}
-                              <a
-                                href={leg2Url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="w-full bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-400 font-bold py-3 rounded-xl text-xs transition-all flex items-center gap-3 px-4 shadow"
-                              >
-                                <div className="flex items-center justify-center w-7 h-7 rounded-full bg-blue-500/20 shrink-0">
-                                  <Navigation className="h-3.5 w-3.5" />
-                                </div>
-                                <div className="flex flex-col text-left">
-                                  <span className="font-bold text-white">📦 Pickup → 🏢 NGO Destination</span>
-                                  <span className="text-[9px] text-blue-500/60 font-normal mt-0.5">
-                                    {item.ngo?.name || 'NGO'} · {ngoAddr ? ngoAddr.split(',')[0] : 'destination'} · driving
-                                  </span>
-                                </div>
-                              </a>
-                            </div>
-                          );
-                        })()}
                       </div>
                     ))}
                   </div>
@@ -928,6 +895,65 @@ export default function VolunteerDashboard() {
               >
                 {actionLoading === selectedTaskIdForCancel ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : null}
                 <span>Submit Cancellation</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DELIVER CONFIRMATION MODAL */}
+      {showDeliverModal && (
+        <div className="fixed inset-0 z-50 bg-dark-900/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="glass-panel p-6 border-emerald-500/20 max-w-md w-full flex flex-col gap-4 text-left shadow-2xl bg-dark-900/95">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                <CheckCircle2 className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white text-outfit">Confirm Delivery</h3>
+                <p className="text-xs text-slate-400">FoodBridge Verified Transfer</p>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-xl bg-white/5 border border-white/5 space-y-2">
+              <p className="text-sm font-semibold text-white leading-relaxed">
+                Confirm that the food has been delivered to the NGO?
+              </p>
+              {selectedTaskFoodName && (
+                <div className="text-xs text-slate-400 pt-2 border-t border-white/5 space-y-1">
+                  <div><strong className="text-slate-300">Food Item:</strong> {selectedTaskFoodName}</div>
+                  {selectedTaskNgoName && <div><strong className="text-slate-300">Destination NGO:</strong> {selectedTaskNgoName}</div>}
+                </div>
+              )}
+            </div>
+
+            <p className="text-[11px] text-slate-400 leading-normal">
+              Once confirmed, the delivery status will be marked as completed across both Volunteer and NGO records, and live navigation will conclude.
+            </p>
+
+            <div className="flex gap-3 justify-end mt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowDeliverModal(false);
+                  setSelectedTaskIdForDeliver(null);
+                  setSelectedTaskFoodName(null);
+                  setSelectedTaskNgoName(null);
+                }}
+                disabled={actionLoading === selectedTaskIdForDeliver}
+                className="px-4 py-2 bg-white/5 hover:bg-white/10 text-slate-300 rounded-lg text-xs font-bold border border-white/5 transition-all"
+              >
+                Cancel
+              </button>
+              
+              <button
+                type="button"
+                onClick={submitVolunteerDelivered}
+                disabled={actionLoading === selectedTaskIdForDeliver}
+                className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-dark-900 font-bold rounded-lg text-xs transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 shadow-lg shadow-emerald-500/20"
+              >
+                {actionLoading === selectedTaskIdForDeliver ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+                <span>Confirm Delivered</span>
               </button>
             </div>
           </div>

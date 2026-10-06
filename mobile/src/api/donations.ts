@@ -1,14 +1,17 @@
 import { apiClient } from './client';
 
 export interface CreateDonationPayload {
-  foodTitle: string;
-  foodType: string;
-  quantityKg: number;
-  servings: number;
-  expiryHours: number;
+  foodName: string;
+  foodCategory: string;
+  quantity: number;
+  unit: string;
+  preparationTime: string | Date;
+  estimatedExpiryTime: string | Date;
+  storageCondition: 'ambient' | 'refrigerated' | 'frozen';
   pickupAddress: string;
-  notes?: string;
-  coordinates?: { lat: number; lng: number };
+  coordinates: [number, number]; // [lng, lat]
+  specialInstructions?: string;
+  foodImages?: string[];
 }
 
 export const donationApi = {
@@ -16,28 +19,59 @@ export const donationApi = {
     const res = await apiClient.post('/donations', payload);
     return res.data;
   },
-  getMyDonations: async () => {
-    const res = await apiClient.get('/donations/my');
+  update: async (id: string, payload: Partial<CreateDonationPayload>) => {
+    const res = await apiClient.put(`/donations/${id}`, payload);
     return res.data;
   },
-  getAvailable: async () => {
-    const res = await apiClient.get('/donations/available');
+  getDonorStats: async () => {
+    const res = await apiClient.get('/donations/donor-stats');
     return res.data;
   },
-  getAssigned: async () => {
-    const res = await apiClient.get('/donations/assigned');
+  getAll: async (status?: string, longitude?: number, latitude?: number) => {
+    let url = `/donations?status=${status || ''}`;
+    if (longitude !== undefined && latitude !== undefined) {
+      url += `&longitude=${longitude}&latitude=${latitude}`;
+    }
+    const res = await apiClient.get(url);
     return res.data;
   },
-  claimDonation: async (id: string) => {
-    const res = await apiClient.put(`/donations/${id}/claim`);
+  getNearby: async (radius = 15, longitude?: number, latitude?: number) => {
+    let url = `/donations/nearby?radius=${radius}`;
+    if (longitude !== undefined && latitude !== undefined) {
+      url += `&longitude=${longitude}&latitude=${latitude}`;
+    }
+    const res = await apiClient.get(url);
+    return res.data;
+  },
+  getById: async (id: string) => {
+    const res = await apiClient.get(`/donations/${id}`);
+    return res.data;
+  },
+  getTracking: async (id: string) => {
+    const res = await apiClient.get(`/donations/${id}/tracking`);
+    return res.data;
+  },
+  acceptDonation: async (id: string, destinationAddress: string, destinationCoordinates: [number, number]) => {
+    const res = await apiClient.put(`/donations/${id}/accept`, {
+      destinationAddress,
+      destinationCoordinates,
+    });
     return res.data;
   },
   updateStatus: async (id: string, status: string) => {
     const res = await apiClient.put(`/donations/${id}/status`, { status });
     return res.data;
   },
-  getById: async (id: string) => {
-    const res = await apiClient.get(`/donations/${id}`);
+  assignVolunteer: async (id: string) => {
+    const res = await apiClient.put(`/donations/${id}/assign-volunteer`, {});
+    return res.data;
+  },
+  volunteerCancel: async (id: string, reason: string, proofPhoto: string) => {
+    const res = await apiClient.put(`/donations/${id}/volunteer-cancel`, { reason, proofPhoto });
+    return res.data;
+  },
+  distributeDonation: async (id: string, distributedQuantity: number, beneficiaryNotes?: string) => {
+    const res = await apiClient.put(`/donations/${id}/distribute`, { distributedQuantity, beneficiaryNotes });
     return res.data;
   },
 };

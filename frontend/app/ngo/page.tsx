@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { ApiService } from '../../services/api';
 import { useAppStore } from '../../store/useAppStore';
+import { useSocket } from '../../hooks/useSocket';
 import { Compass, MapPin, MessageSquare, RefreshCw, CheckSquare, Star, Map, Navigation, AlertTriangle, Landmark, XCircle } from 'lucide-react';
 import NextLink from 'next/link';
 import LocationPicker from '../../components/LocationPicker';
@@ -45,6 +46,7 @@ interface PipelineDonation {
 }
 
 export default function NgoDashboard() {
+  useSocket();
   const { user } = useAppStore();
   const [nearby, setNearby] = useState<NearbyDonation[]>([]);
   const [pipeline, setPipeline] = useState<PipelineDonation[]>([]);
@@ -444,8 +446,8 @@ export default function NgoDashboard() {
                       </div>
                       <div className="flex flex-col text-right">
                         <span className="text-[9px] uppercase font-bold text-slate-400">Consume By / Expiry</span>
-                        <span className={`font-semibold mt-0.5 ${item.aiRiskLevel === 'danger' ? 'text-red-400' : 'text-slate-200'}`}>
-                          {item.estimatedExpiryTime ? formatISTDateTime(item.estimatedExpiryTime) : `${item.aiSafeWindowHours} Hours Left`}
+                        <span className="font-semibold mt-0.5 text-slate-200">
+                          {item.estimatedExpiryTime ? formatISTDateTime(item.estimatedExpiryTime) : 'N/A'}
                         </span>
                       </div>
                     </div>

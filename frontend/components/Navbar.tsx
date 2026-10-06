@@ -41,7 +41,7 @@ export default function Navbar() {
     }
   }, [mounted, isAuthenticated, user, setNotifications]);
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const unreadCount = notifications.filter(n => !n.read && !n.isRead).length;
 
   const desktopNavRef = useRef<HTMLDivElement>(null);
   const mobileNavRef  = useRef<HTMLDivElement>(null);
@@ -173,9 +173,6 @@ export default function Navbar() {
                       Donate Food
                     </Link>
                     <Link href="/donor"              data-nav-item="/donor"              className={navLink('/donor')}>Dashboard</Link>
-                    <Link href="/donor/certificates" data-nav-item="/donor/certificates" className={navLink('/donor/certificates', 'flex items-center gap-1')}>
-                      <Award className="h-3.5 w-3.5" /> Certificates
-                    </Link>
                   </>
                 )}
 
@@ -206,6 +203,15 @@ export default function Navbar() {
                     <Landmark className="h-4 w-4" /> Admin Console
                   </Link>
                 )}
+
+                {/* FOOD AI - Available to ALL authenticated users */}
+                <Link
+                  href="/food-ai"
+                  data-nav-item="/food-ai"
+                  className={navLink('/food-ai', 'flex items-center gap-1.5')}
+                >
+                  <span className="text-base leading-none">🍽️</span> FOOD AI
+                </Link>
 
                 {/* Bell */}
                 <div className="relative z-10 ml-1">
@@ -326,7 +332,6 @@ export default function Navbar() {
                 <>
                   <Link href="/donor/donate"        className="relative z-10 block px-4 py-2.5 rounded-xl text-sm font-semibold text-brand-500 hover:bg-brand-500/10 transition-colors">Donate Food</Link>
                   <Link href="/donor"              data-nav-item="/donor"              className={mobileNavLink('/donor')}>Dashboard</Link>
-                  <Link href="/donor/certificates" data-nav-item="/donor/certificates" className={mobileNavLink('/donor/certificates')}>Impact Certificates</Link>
                 </>
               )}
 
@@ -346,6 +351,11 @@ export default function Navbar() {
               {user.role === 'ADMIN' && (
                 <Link href="/admin" className="relative z-10 block px-4 py-2.5 rounded-xl text-sm font-semibold text-amber-400 hover:bg-amber-500/10 transition-colors">Admin Control</Link>
               )}
+
+              {/* FOOD AI Mobile Link */}
+              <Link href="/food-ai" data-nav-item="/food-ai" className={mobileNavLink('/food-ai')}>
+                <span className="mr-1.5">🍽️</span> FOOD AI
+              </Link>
 
               <Link href="/profile" data-nav-item="/profile" className={mobileNavLink('/profile')}>Edit Profile</Link>
 

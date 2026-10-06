@@ -6,9 +6,19 @@ import { ApiService } from '../../../services/api';
 import { useAppStore } from '../../../store/useAppStore';
 import { useSocket } from '../../../hooks/useSocket';
 import { MapPin, Navigation, Compass, Clock, Award, ShieldCheck, Heart, Truck, CheckCircle2, ChevronRight, ArrowLeft, RefreshCw } from 'lucide-react';
-import ActiveTrackingMap from '../../../components/ActiveTrackingMap';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { formatDateTime, formatISTDateTime } from '../../../utils/formatDate';
+
+const ActiveTrackingMap = dynamic(() => import('../../../components/ActiveTrackingMap'), {
+  ssr: false,
+  loading: () => (
+    <div className="h-80 w-full bg-dark-900/60 rounded-xl border border-white/10 flex items-center justify-center text-slate-400 text-xs gap-2">
+      <RefreshCw className="h-4 w-4 animate-spin text-brand-500" />
+      <span>Loading Interactive Road Map...</span>
+    </div>
+  ),
+});
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -237,18 +247,10 @@ export default function DonationDetailsPage({ params }: Props) {
             </div>
 
             {/* General specs */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 py-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-6 py-2">
               <div>
                 <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Storage</span>
                 <span className="text-sm font-semibold text-white mt-1 block capitalize">{donation.storageCondition}</span>
-              </div>
-              <div>
-                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Freshness Score</span>
-                <span className="text-sm font-semibold text-brand-500 mt-1 block font-bold">{donation.aiFreshnessScore || 90}%</span>
-              </div>
-              <div>
-                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Safe Window</span>
-                <span className="text-sm font-semibold text-white mt-1 block">{donation.aiSafeWindowHours || 8} hours</span>
               </div>
               <div>
                 <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Expiry Time</span>
@@ -439,18 +441,58 @@ export default function DonationDetailsPage({ params }: Props) {
         <div className="flex flex-col gap-6">
           <h3 className="text-lg font-bold text-white text-outfit border-b border-white/5 pb-2">Donation Tracking Status</h3>
 
-          {/* Active road routing map */}
-          {donation.location?.coordinates && (donation.location.coordinates[0] !== 0 || donation.location.coordinates[1] !== 0) && (
-            <ActiveTrackingMap
-              donorCoords={donation.location.coordinates}
-              ngoCoords={donation.destinationLocation?.coordinates || donation.ngo?.location?.coordinates}
-              volunteerCoords={volCoords}
-              status={donation.status}
-              donorAddress={donation.pickupAddress}
-              ngoName={donation.ngo?.name}
-              ngoAddress={donation.destinationAddress || donation.ngo?.address}
-              volunteerName={donation.volunteer?.name}
-            />
+          {/* Active road routing map (shown only during active delivery/transit) */}
+          {!['DELIVERED', 'DISTRIBUTED', 'COMPLETED', 'CANCELLED', 'EXPIRED'].includes(donation.status) &&
+            donation.location?.coordinates &&
+            (donation.location.coordinates[0] !== 0 || donation.location.coordinates[1] !== 0) && (
+              <ActiveTrackingMap
+                donorCoords={donation.location.coordinates}
+                ngoCoords={donation.destinationLocation?.coordinates || donation.ngo?.location?.coordinates}
+                volunteerCoords={volCoords}
+                status={donation.status}
+                donorAddress={donation.pickupAddress}
+                ngoName={donation.ngo?.name}
+                ngoAddress={donation.destinationAddress || donation.ngo?.address}
+                volunteerName={donation.volunteer?.name}
+              />
+            )}
+
+          {/* Delivery Completed Record Card */}
+          {['DELIVERED', 'DISTRIBUTED', 'COMPLETED'].includes(donation.status) && (
+            <div className="glass-panel p-6 border-emerald-500/20 bg-emerald-950/20 flex flex-col gap-4 rounded-2xl shadow-xl">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400">
+                  <CheckCircle2 className="h-6 w-6" />
+                </div>
+                <div>
+                  <h4 className="text-base font-bold text-white text-outfit">Food Delivered to NGO</h4>
+                  <p className="text-xs text-emerald-400/80 font-medium">Delivery Completed Successfully</p>
+                </div>
+              </div>
+              
+              <div className="p-4 rounded-xl bg-white/5 border border-white/5 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div>
+                  <span className="text-slate-500 uppercase font-bold text-[10px] block">Receiving NGO</span>
+                  <span className="text-slate-200 font-semibold">{donation.ngo?.name || 'NGO Center'}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 uppercase font-bold text-[10px] block">Delivered By</span>
+                  <span className="text-slate-200 font-semibold">{(donation.deliveredBy as any)?.name || donation.volunteer?.name || 'Assigned Volunteer'}</span>
+                </div>
+                {(donation.deliveredAt || donation.updatedAt) && (
+                  <div className="sm:col-span-2 pt-2 border-t border-white/5 flex items-center justify-between text-slate-400 text-[11px]">
+                    <span>Delivered At:</span>
+                    <span className="text-slate-300 font-medium">
+                      {new Date(donation.deliveredAt || donation.updatedAt).toLocaleString()}
+                    </span>
+                  </div>
+                )}
+              </div>
+              
+              <div className="text-[11px] text-slate-400 flex items-center gap-1.5">
+                <span>ℹ️ Live route closed. Tracking records archived for delivery history.</span>
+              </div>
+            </div>
           )}
 
           <div className="glass-panel p-6 border-white/5 relative pl-10 space-y-8 before:absolute before:left-5 before:top-2 before:bottom-2 before:w-[2px] before:bg-white/5">

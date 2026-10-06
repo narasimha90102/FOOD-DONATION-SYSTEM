@@ -139,6 +139,16 @@ export default function NotificationsPage() {
     }
   };
 
+  const handleDeleteNotification = async (e: React.MouseEvent, notificationId: string) => {
+    e.stopPropagation();
+    try {
+      deleteNotification(notificationId);
+      await ApiService.delete(`/notifications/${notificationId}`);
+    } catch (err) {
+      console.error('Failed to delete notification:', err);
+    }
+  };
+
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   return (
@@ -198,7 +208,7 @@ export default function NotificationsPage() {
                 >
                   {/* Indicator Dot */}
                   {!notif.read && (
-                    <span className="absolute top-5 right-5 h-2.5 w-2.5 rounded-full bg-brand-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+                    <span className="absolute top-5 right-12 h-2.5 w-2.5 rounded-full bg-brand-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
                   )}
 
                   {/* Icon Container */}
@@ -207,7 +217,7 @@ export default function NotificationsPage() {
                   </div>
 
                   {/* Details */}
-                  <div className="flex-grow min-w-0 pr-4">
+                  <div className="flex-grow min-w-0 pr-2">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-1">
                       <h3 className={`text-sm font-bold truncate ${notif.read ? 'text-white' : 'text-brand-400'}`}>
                         {notif.title}
@@ -227,11 +237,21 @@ export default function NotificationsPage() {
                       </span>
                     )}
                   </div>
+
+                  {/* Delete Button */}
+                  <button
+                    onClick={(e) => handleDeleteNotification(e, notif._id)}
+                    className="self-center p-2 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors shrink-0"
+                    title="Delete notification"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
                 </div>
               );
             })}
           </div>
         ) : (
+
           /* Empty State */
           <div className="glass-panel border-white/5 p-12 text-center flex flex-col items-center justify-center">
             <div className="p-4 rounded-full bg-white/5 text-slate-500 mb-4 animate-float">

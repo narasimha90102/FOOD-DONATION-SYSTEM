@@ -47,4 +47,8 @@ Thumbs.db
 # Android build outputs
 mobile/android/app/build/
 mobile/android/.gradle/
+mobile/android/.gradle_user_home/
 mobile/android/build/
+*.apk
+.gradle_user_home/
+scratch/

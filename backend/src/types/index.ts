@@ -108,6 +108,9 @@ export interface IDonation extends Document {
     remainingQuantity: number;
     notes?: string;
   };
+  deliveredAt?: Date;
+  deliveredBy?: Types.ObjectId | string | IUser;
+  deliveryStatus?: 'PENDING' | 'DELIVERED';
   cancelledBy?: Types.ObjectId | string | IUser;
   cancelledByRole?: 'DONOR' | 'NGO' | 'ADMIN' | 'VOLUNTEER';
   cancellationReason?: string;

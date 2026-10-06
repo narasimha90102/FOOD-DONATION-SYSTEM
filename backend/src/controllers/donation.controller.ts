@@ -1,10 +1,11 @@
 import { Response, NextFunction } from 'express';
+import PDFDocument from 'pdfkit';
 import { AuthRequest } from '../middlewares/auth';
 import { Donation } from '../models/Donation';
 import { User } from '../models/User';
 import { Chat } from '../models/Chat';
-import { AIService } from '../services/ai.service';
 import { LocationService } from '../services/location.service';
+import { RoutingService } from '../services/routing.service';
 import { SocketService } from '../services/socket.service';
 
 /**
@@ -55,25 +56,6 @@ export const createDonation = async (req: AuthRequest, res: Response, next: Next
       });
     }
 
-    // 1. Core AI Expiry Prediction
-    let aiPrediction;
-    try {
-      aiPrediction = await AIService.predictExpiry({
-        foodCategory,
-        preparationTime: new Date(preparationTime),
-        estimatedExpiryTime: new Date(estimatedExpiryTime),
-        storageCondition: storageCondition || 'ambient',
-      });
-    } catch (aiErr: any) {
-      if (aiErr.message && aiErr.message.includes('unavailable')) {
-        return res.status(503).json({ success: false, message: aiErr.message });
-      }
-      throw aiErr;
-    }
-
-    // 2. Core Trust Score Calculation
-    const donorTrustScore = req.user.trustScore;
-
     const donation = await Donation.create({
       donor: req.user._id,
       foodName,
@@ -92,10 +74,10 @@ export const createDonation = async (req: AuthRequest, res: Response, next: Next
       specialInstructions: specialInstructions || '',
       status: 'PENDING',
       statusHistory: [{ status: 'PENDING', updatedBy: req.user._id, updatedAt: new Date() }],
-      aiSafeWindowHours: aiPrediction.aiSafeWindowHours,
-      aiFreshnessScore: aiPrediction.aiFreshnessScore,
-      aiRiskLevel: aiPrediction.aiRiskLevel,
-      aiRecommendation: aiPrediction.aiRecommendation,
+      aiSafeWindowHours: 12,
+      aiFreshnessScore: 90,
+      aiRiskLevel: 'safe',
+      aiRecommendation: 'Food safe for immediate distribution.',
     });
 
     // 3. Find and Alert nearby NGOs dynamically
@@ -169,10 +151,24 @@ export const getDonations = async (req: AuthRequest, res: Response, next: NextFu
       query.status = status;
     }
 
-    // Retrieve user coordinates to compute real distance on the list
-    const userLng = req.user?.location?.coordinates?.[0] || 0;
-    const userLat = req.user?.location?.coordinates?.[1] || 0;
-    const locationKnown = userLng !== 0 || userLat !== 0;
+    // Retrieve user coordinates (from query string or user profile) to compute real distance on the list
+    let userLng = req.user?.location?.coordinates?.[0] || 0;
+    let userLat = req.user?.location?.coordinates?.[1] || 0;
+
+    if (req.query.longitude && req.query.latitude) {
+      userLng = Number(req.query.longitude);
+      userLat = Number(req.query.latitude);
+    }
+
+    const locationKnown = (userLng !== 0 || userLat !== 0) && !isNaN(userLng) && !isNaN(userLat);
+
+    if (req.user?.role === 'VOLUNTEER') {
+      console.log(`\n[VOLUNTEER LOCATION DEBUG]`);
+      console.log(`Logged-in Volunteer ID: ${req.user._id}`);
+      console.log(`Captured Latitude: ${userLat}`);
+      console.log(`Captured Longitude: ${userLng}`);
+      console.log(`Location Known: ${locationKnown}`);
+    }
 
     const donations = await Donation.find(query)
       .populate('donor', 'name email trustScore profilePicture ratingAverage')
@@ -181,11 +177,32 @@ export const getDonations = async (req: AuthRequest, res: Response, next: NextFu
       .sort({ createdAt: -1 });
 
     const donationsWithDistance = donations.map((don) => {
-      const [donLng, donLat] = don.location.coordinates;
-      const distance = locationKnown
+      const [donLng, donLat] = don.location?.coordinates || [0, 0];
+
+      // Distance 1: User/Volunteer Location ↔ Pickup Location (in KM)
+      const distance = (locationKnown && donLat !== 0 && donLng !== 0)
         ? LocationService.calculateDistance(userLat, userLng, donLat, donLng)
         : -1;
-      return { ...don.toObject(), distance };
+
+      // Distance 2: Pickup Location ↔ NGO Location (in KM)
+      let pickupToNgoDistance = -1;
+      const ngoCoords = (don as any).destinationLocation?.coordinates || (don.ngo as any)?.location?.coordinates;
+      if (ngoCoords && Array.isArray(ngoCoords) && ngoCoords.length === 2) {
+        const [ngoLng, ngoLat] = ngoCoords;
+        if ((ngoLng !== 0 || ngoLat !== 0) && (donLng !== 0 || donLat !== 0)) {
+          pickupToNgoDistance = LocationService.calculateDistance(donLat, donLng, ngoLat, ngoLng);
+        }
+      }
+
+      if (req.user?.role === 'VOLUNTEER' && distance !== -1) {
+        console.log(`[VOLUNTEER DISTANCE DEBUG] Item: ${don.foodName} | Vol -> Pickup: ${distance} km | Pickup -> NGO: ${pickupToNgoDistance} km`);
+      }
+
+      return {
+        ...don.toObject(),
+        distance,
+        pickupToNgoDistance,
+      };
     });
 
     res.status(200).json({
@@ -247,23 +264,12 @@ export const getNearbyDonations = async (req: AuthRequest, res: Response, next: 
           ? LocationService.calculateDistance(ngoLat, ngoLng, donLat, donLng)
           : -1; // -1 = distance unknown, displayed as "Unknown" on the frontend
 
-        let freshOutput;
-        try {
-          freshOutput = await AIService.predictExpiry({
-            foodCategory: don.foodCategory,
-            preparationTime: don.preparationTime,
-            estimatedExpiryTime: don.estimatedExpiryTime,
-            storageCondition: don.storageCondition,
-          });
-        } catch (err) {
-          // Fallback to database values on transient Ollama offline state for lists
-          freshOutput = {
-            aiFreshnessScore: don.aiFreshnessScore || 85,
-            aiSafeWindowHours: don.aiSafeWindowHours || 8,
-            aiRiskLevel: don.aiRiskLevel || 'safe',
-            aiRecommendation: don.aiRecommendation || 'Safe to consume. Check smell.',
-          };
-        }
+        const freshOutput = {
+          aiFreshnessScore: don.aiFreshnessScore || 90,
+          aiSafeWindowHours: don.aiSafeWindowHours || 12,
+          aiRiskLevel: don.aiRiskLevel || 'safe',
+          aiRecommendation: don.aiRecommendation || 'Safe to consume.',
+        };
 
         const donObj = don.toObject();
         donObj.aiFreshnessScore = freshOutput.aiFreshnessScore;
@@ -452,6 +458,18 @@ export const updateDonationStatus = async (req: AuthRequest, res: Response, next
       donation.cancellationReason = req.body.reason || 'Cancelled by donor/admin';
     }
 
+    // Prevent duplicate delivery
+    if (status === 'DELIVERED' && donation.status === 'DELIVERED') {
+      return res.status(400).json({ success: false, message: 'Delivery already completed.' });
+    }
+
+    // Store delivery metadata when marking as DELIVERED
+    if (status === 'DELIVERED') {
+      donation.deliveredAt = new Date();
+      donation.deliveredBy = req.user?._id as any;
+      donation.deliveryStatus = 'DELIVERED';
+    }
+
     // Status transitions and notifications
     donation.status = status;
     donation.statusHistory.push({ status, updatedBy: (req.user?._id || donation.donor) as any, updatedAt: new Date() });
@@ -462,6 +480,7 @@ export const updateDonationStatus = async (req: AuthRequest, res: Response, next
       .populate('donor', 'name email trustScore profilePicture ratingAverage')
       .populate('ngo', 'name email address profilePicture ngoAcceptedCategories location')
       .populate('volunteer', 'name email phoneNumber profilePicture')
+      .populate('deliveredBy', 'name email profilePicture')
       .populate('cancelledBy', 'name email profilePicture');
 
     // Broadcast update event to all users for real-time synchronization
@@ -519,8 +538,8 @@ export const updateDonationStatus = async (req: AuthRequest, res: Response, next
       });
       if (ngoIdStr) {
         await SocketService.sendSystemNotification(ngoIdStr, {
-          title: 'Food Arrived at Centre',
-          message: `"${donation.foodName}" has been delivered by "${userRealName}". Please log the distribution.`,
+          title: 'Food Delivered Successfully ✅',
+          message: `Food has been delivered successfully to your NGO centre. "${donation.foodName}" delivered by "${userRealName}".`,
           type: 'DELIVERY_COMPLETED',
           relatedId: donation._id.toString(),
         });
@@ -752,6 +771,17 @@ export const assignVolunteer = async (req: AuthRequest, res: Response, next: Nex
     donation.statusHistory.push({ status: 'VOLUNTEER_ASSIGNED', updatedBy: req.user._id, updatedAt: new Date() });
     await donation.save();
 
+    // Persist volunteer location to profile if provided in request
+    const volCoords = req.body?.volunteerLocation?.coordinates || req.body?.coordinates;
+    if (volCoords && Array.isArray(volCoords) && volCoords.length === 2) {
+      const [lng, lat] = [Number(volCoords[0]), Number(volCoords[1])];
+      if (lng !== 0 || lat !== 0) {
+        await User.findByIdAndUpdate(req.user._id, {
+          location: { type: 'Point', coordinates: [lng, lat] }
+        });
+      }
+    }
+
     // Re-fetch fully populated donation so response & socket payload have all nested objects
     const populatedDonation = await Donation.findById(donation._id)
       .populate('donor', 'name email trustScore profilePicture ratingAverage')
@@ -968,23 +998,7 @@ export const updateDonation = async (req: AuthRequest, res: Response, next: Next
       };
     }
 
-    // Trigger AI prediction if relevant fields changed
-    if (foodCategory || preparationTime || estimatedExpiryTime || storageCondition) {
-      try {
-        const aiPrediction = await AIService.predictExpiry({
-          foodCategory: donation.foodCategory,
-          preparationTime: donation.preparationTime,
-          estimatedExpiryTime: donation.estimatedExpiryTime,
-          storageCondition: donation.storageCondition,
-        });
-        donation.aiSafeWindowHours = aiPrediction.aiSafeWindowHours;
-        donation.aiFreshnessScore = aiPrediction.aiFreshnessScore;
-        donation.aiRiskLevel = aiPrediction.aiRiskLevel;
-        donation.aiRecommendation = aiPrediction.aiRecommendation;
-      } catch (aiErr) {
-        console.warn('AI Predict error during update, keeping existing values or using default fallbacks');
-      }
-    }
+
 
     await donation.save();
 
@@ -1210,4 +1224,111 @@ export const repairCorruptedCoordinates = async (req: AuthRequest, res: Response
     next(error);
   }
 };
+
+/**
+ * @desc    Get road route between origin and destination with lowest distance optimization
+ * @route   POST /api/donations/route
+ * @access  Private
+ */
+export const calculateRoute = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { origin, destination } = req.body;
+    if (!origin || !destination) {
+      return res.status(400).json({ success: false, message: 'Origin and destination coordinates are required.' });
+    }
+
+    const routeData = await RoutingService.getRoadRoute(origin, destination);
+    return res.status(200).json(routeData);
+  } catch (error: any) {
+    return res.status(400).json({ success: false, message: error.message || 'Route calculation failed.' });
+  }
+};
+
+/**
+ * @desc    Get comprehensive tracking status & multi-stop route breakdown for a donation
+ * @route   GET /api/donations/:id/tracking
+ * @access  Private
+ */
+export const getDonationTracking = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const donation = await Donation.findById(req.params.id)
+      .populate('donor', 'name email trustScore profilePicture location address')
+      .populate('ngo', 'name email address profilePicture location')
+      .populate('volunteer', 'name email phoneNumber profilePicture location');
+
+    if (!donation) {
+      return res.status(404).json({ success: false, message: 'Donation not found.' });
+    }
+
+    const pickupCoords = donation.location?.coordinates || [0, 0];
+    const pickupAddress = donation.pickupAddress || (donation.donor as any)?.address || 'Pickup Stop';
+
+    const ngoCoords = (donation as any).destinationLocation?.coordinates || (donation.ngo as any)?.location?.coordinates || [0, 0];
+    const ngoName = (donation.ngo as any)?.name || 'NGO Center';
+    const ngoAddress = (donation as any).destinationAddress || (donation.ngo as any)?.address || 'NGO Destination';
+
+    const volunteerCoords = (donation.volunteer as any)?.location?.coordinates || [0, 0];
+    const volunteerName = (donation.volunteer as any)?.name || 'Volunteer Partner';
+
+    const hasPickup = RoutingService.isValidCoords(pickupCoords as [number, number]);
+    const hasNgo = RoutingService.isValidCoords(ngoCoords as [number, number]);
+    const hasVolunteer = RoutingService.isValidCoords(volunteerCoords as [number, number]);
+
+    let leg1 = null; // Vol -> Pickup
+    let leg2 = null; // Pickup -> NGO
+
+    if (hasVolunteer && hasPickup) {
+      try {
+        leg1 = await RoutingService.getRoadRoute(volunteerCoords as [number, number], pickupCoords as [number, number]);
+      } catch (e) {}
+    }
+
+    if (hasPickup && hasNgo) {
+      try {
+        leg2 = await RoutingService.getRoadRoute(pickupCoords as [number, number], ngoCoords as [number, number]);
+      } catch (e) {}
+    }
+
+    // Active stage logic
+    let activeStage = 'COMPLETED';
+    let activeLeg = null;
+
+    if (['PENDING', 'NGO_ACCEPTED', 'VOLUNTEER_ASSIGNED', 'GOING_TO_PICKUP'].includes(donation.status)) {
+      activeStage = 'BEFORE_PICKUP';
+      activeLeg = leg1 || leg2;
+    } else if (['PICKED_UP', 'IN_TRANSIT'].includes(donation.status)) {
+      activeStage = 'IN_TRANSIT_TO_NGO';
+      activeLeg = leg2;
+    }
+
+    res.status(200).json({
+      success: true,
+      donationId: donation._id,
+      foodName: donation.foodName,
+      status: donation.status,
+      activeStage,
+      pickup: {
+        address: pickupAddress,
+        coordinates: pickupCoords,
+      },
+      ngo: {
+        name: ngoName,
+        address: ngoAddress,
+        coordinates: ngoCoords,
+      },
+      volunteer: {
+        name: volunteerName,
+        coordinates: volunteerCoords,
+      },
+      leg1,
+      leg2,
+      activeLeg,
+      totalJourneyKm: parseFloat(((leg1?.distanceKm || 0) + (leg2?.distanceKm || 0)).toFixed(2)),
+      totalJourneyMinutes: (leg1?.durationMinutes || 0) + (leg2?.durationMinutes || 0),
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 
